@@ -349,8 +349,8 @@ public class PortWorker implements Runnable, AutoCloseable {
 
     /**
      * ✅ Execute AT command synchronously using this worker's serial port.
-     * Used by ProxyDataService to send data connection commands without
-     * opening a separate serial connection (which would conflict with PortWorker).
+     * Dùng bởi các tác vụ kiểm tra sức khỏe SIM để gửi lệnh mà không mở thêm
+     * một serial connection cạnh tranh với PortWorker.
      *
      * Thread-safe: Uses CompletableFuture + queue to run on worker thread.
      *
@@ -367,7 +367,7 @@ public class PortWorker implements Runnable, AutoCloseable {
         CompletableFuture<String> future = new CompletableFuture<>();
 
         // Enqueue a CRITICAL CMD task that stores result in future
-        Task task = Task.criticalCmd(command, "PROXY", "proxy-cmd");
+        Task task = Task.criticalCmd(command, "SYSTEM", "sync-at-command");
         // Use a custom callback mechanism via a response holder
         task.responseFuture = future;
         enqueue(task);
@@ -382,7 +382,7 @@ public class PortWorker implements Runnable, AutoCloseable {
     }
 
     /**
-     * ✅ Execute multiple AT commands synchronously for proxy data connection.
+     * Execute multiple AT commands synchronously for modem diagnostics.
      * Commands are executed sequentially on the worker's serial port.
      *
      * @param commands list of {command, timeout_ms} pairs
@@ -4189,7 +4189,7 @@ public class PortWorker implements Runnable, AutoCloseable {
         public String expectedCaller; // ✅ NEW: For CALL_IN - số điện thoại dự kiến gọi đến
         public boolean acceptHiddenNumber; // ✅ NEW: Accept calls with hidden/private caller ID
         public int timeWindowSeconds; // ✅ NEW: Time window for accepting calls (time-based matching)
-        public CompletableFuture<String> responseFuture; // ✅ NEW: For sync AT command execution (proxy)
+        public CompletableFuture<String> responseFuture; // Kết quả lệnh AT đồng bộ.
 
         // ✅ RETRY: Tracking fields for auto-retry across SIMs
         public int retryCount = 0;

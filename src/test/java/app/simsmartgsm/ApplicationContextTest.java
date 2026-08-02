@@ -18,8 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "spring.datasource.url=jdbc:h2:mem:simtech-test",
                 "gsm.auto-scan-on-startup=false",
                 "gsm.recording-path=target/test-recordings",
-                "recording.save.path=target/test-recordings",
-                "proxy.enabled=false"
+                "recording.save.path=target/test-recordings"
         })
 class ApplicationContextTest {
     @Autowired private GsmController dashboardController;

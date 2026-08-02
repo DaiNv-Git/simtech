@@ -46,12 +46,6 @@ recording:
   save:
     path: ${RECORDING_PATH:C:/recording}
 
-proxy:
-  enabled: false
-  base-port: 10001
-  default-apn: rakuten.jp
-  health-check-interval: 30000
-
 # ===== Telegram notifications =====
 telegram:
   enabled: ${TELEGRAM_ENABLED:false}

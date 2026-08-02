@@ -38,7 +38,7 @@ public interface SimRepository extends MongoRepository<Sim, String> {
     // 🆕 Tìm SIM theo deviceName và comName (cho multi-device environment)
     Optional<Sim> findFirstByDeviceNameAndComName(String deviceName, String comName);
 
-    // 🆕 Tìm SIM theo deviceName và status (cho Proxy module)
+    // Tìm SIM theo thiết bị và trạng thái cho các job quét/nhận SMS.
     List<Sim> findByDeviceNameAndStatus(String deviceName, String status);
 
     // 🆕 Tìm các SIM đang bị khoá không cho gửi SMS
