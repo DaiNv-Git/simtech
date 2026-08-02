@@ -1,6 +1,5 @@
 package app.simsmartgsm.service;
 
-import app.simsmartgsm.baseGateway.CloudGateway;
 import app.simsmartgsm.config.ComManager;
 import app.simsmartgsm.config.PortResolver;
 import app.simsmartgsm.entity.CallRecord;
@@ -35,7 +34,6 @@ public class CallService {
 
     private final CallRecordRepository callRecordRepository;
     private final SimpMessagingTemplate messagingTemplate;
-    private final CloudGateway cloudGateway;
     private final PortResolver portResolver;
     private final ComManager comManager;
 
@@ -54,14 +52,6 @@ public class CallService {
     /** Thư mục lưu file ghi âm tạm */
     @Value("${gsm.record.upload-dir:/var/www/html/recordings}")
     private String uploadDir;
-
-    /** API đích để upload file lên cloud */
-    @Value("${gsm.record.upload-url}")
-    private String uploadUrl;
-
-    /** URL public để nghe lại file */
-    @Value("${gsm.record.public-url}")
-    private String publicUrl;
 
     // ==============================
     // 📞 Gọi và xử lý ghi âm
@@ -339,25 +329,12 @@ public class CallService {
                             - call.getCallStartTime().getEpochSecond(),
                     "timestamp", Instant.now().toString()));
 
-            // ☁️ Callback Cloud
-            cloudGateway.sendCallRecord(
-                    sim,
-                    target,
-                    call.getCallStartTime(),
-                    call.getCallEndTime(),
-                    uploadedUrl,
-                    call.getOrderId());
-
         } catch (Exception e) {
             log.error("❌ Lỗi khi dừng call: {}", e.getMessage());
             call.setStatus("FAILED");
             call.setUpdatedAt(Instant.now());
             callRecordRepository.save(call);
 
-            cloudGateway.sendCallEvent(
-                    "FAILED", sim, target,
-                    call.getCallStartTime(), Instant.now(),
-                    call.getOrderId(), record, e.getMessage());
         } finally {
             // ✅ Cleanup tracked tasks
             if (taskId != null) {
@@ -421,7 +398,7 @@ public class CallService {
     }
 
     // ==============================
-    // ☁️ Upload File Ghi Âm lên Cloud
+    // 💾 Giữ file ghi âm tại máy
     // ==============================
     private String uploadRecordFile(String localPath) {
         try {
@@ -429,27 +406,8 @@ public class CallService {
             if (!file.exists() || file.length() == 0)
                 throw new IllegalStateException("File không tồn tại hoặc trống: " + localPath);
 
-            log.info("☁️ Upload file {} lên {}", file.getName(), uploadUrl);
-
-            RestTemplate restTemplate = new RestTemplate();
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("file", new FileSystemResource(file));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<Map> response = restTemplate.exchange(uploadUrl, HttpMethod.POST, request, Map.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                Object url = response.getBody() != null ? response.getBody().get("url") : null;
-                String publicLink = url != null ? url.toString() : publicUrl + file.getName();
-                log.info("✅ Upload thành công: {}", publicLink);
-                return publicLink;
-            } else {
-                log.warn("⚠️ Upload thất bại: HTTP {}", response.getStatusCode());
-                return null;
-            }
+            log.info("💾 Giữ recording tại máy: {}", file.getAbsolutePath());
+            return file.getAbsolutePath();
 
         } catch (Exception e) {
             log.error("❌ Upload record thất bại: {}", e.getMessage(), e);

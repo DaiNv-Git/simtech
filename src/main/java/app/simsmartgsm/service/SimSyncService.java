@@ -1,6 +1,5 @@
 package app.simsmartgsm.service;
 
-import app.simsmartgsm.config.AgentStompSubscriber;
 import app.simsmartgsm.dto.response.SimResponse;
 import app.simsmartgsm.entity.Sim;
 import app.simsmartgsm.repository.SimRepository;
@@ -825,7 +824,7 @@ public class SimSyncService {
             sim.setStatus(notBlank(ss.phoneNumber) ? "ACTIVE" : "INACTIVE");
             sim.setMissCount(0);
             sim.setLastUpdated(Instant.now());
-            sim.setAgentId(AgentStompSubscriber.agentId);
+            sim.setAgentId(deviceName);
 
             simRepository.save(sim);
             log.debug("✅ [IMMEDIATE] Đã lưu SIM: ccid={}, phone={}, com={}",
@@ -1101,7 +1100,7 @@ public class SimSyncService {
                         existingByPhone.setStatus("ACTIVE");
                         existingByPhone.setMissCount(0);
                         existingByPhone.setLastUpdated(Instant.now());
-                        existingByPhone.setAgentId(AgentStompSubscriber.agentId);
+                        existingByPhone.setAgentId(deviceName);
 
                         sim = existingByPhone;
 
@@ -1223,7 +1222,7 @@ public class SimSyncService {
 
         sim.setSimProvider(ss.simProvider);
         sim.setLastUpdated(Instant.now());
-        sim.setAgentId(AgentStompSubscriber.agentId);
+        sim.setAgentId(sim.getDeviceName());
 
         // ✅ QUAN TRỌNG: Reset miss count và status khi SIM được scan thấy lại
         if (sim.getMissCount() > 0) {

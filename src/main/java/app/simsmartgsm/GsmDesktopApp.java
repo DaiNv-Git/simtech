@@ -55,7 +55,7 @@ public class GsmDesktopApp extends Application {
         primaryStage.setMaximized(true);
 
         // Configure stage (window)
-        primaryStage.setTitle("GSM Smart Application");
+        primaryStage.setTitle("simTech - GSM SMS Tool");
 
         // Add Application Icon
         try {

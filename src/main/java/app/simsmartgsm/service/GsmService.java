@@ -70,9 +70,6 @@ public class GsmService {
     private final SimCleanupService simCleanupService;
     private final SmsDailyLimitService smsDailyLimitService;
 
-    // ✅ NEW: For remote WebSocket calls (from RemoteCallOutSubscriberConfig)
-    private final app.simsmartgsm.config.RemoteWsClient remoteWsClient;
-    private final app.simsmartgsm.baseGateway.CloudGateway cloudGateway;
     private final app.simsmartgsm.repository.CallMessageRepository callMessageRepository;
 
     @Value("${gsm.recording-path:./recordings}")
@@ -882,8 +879,7 @@ public class GsmService {
                                 request.getAudioFileName(),
                                 request.getLocalAudioPath(),
                                 repeatAudio, waitAfter, shouldRecord,
-                                request.getServiceCode(), request.getOrderId(),
-                                cloudGateway, remoteWsClient);
+                                request.getServiceCode(), request.getOrderId());
 
                 try (app.simsmartgsm.session.TaskSession session = audioTask.createSession()) {
                     session.openPort();
@@ -1204,20 +1200,6 @@ public class GsmService {
             messagingTemplate.convertAndSend("/topic/call/incoming", payload);
             log.debug("📡 [{}] Incoming call status: {} -> /topic/call/incoming", comPort, status);
 
-            // Also send to remote if serviceCode is present
-            if (serviceCode != null && orderId != null && remoteWsClient != null) {
-                // Build remote notification
-                Map<String, Object> remotePayload = new HashMap<>();
-                remotePayload.put("type", "INCOMING_CALL_STATUS");
-                remotePayload.put("status", status);
-                remotePayload.put("comPort", comPort);
-                remotePayload.put("simPhone", simPhone);
-                remotePayload.put("callerNumber", callerNumber);
-                remotePayload.put("orderId", orderId);
-                remotePayload.put("serviceCode", serviceCode);
-
-                remoteWsClient.send("/app/call/status", remotePayload);
-            }
         } catch (Exception e) {
             log.error("❌ Failed to send incoming call status: {}", e.getMessage());
         }
@@ -1240,7 +1222,7 @@ public class GsmService {
                 updateCallStatus(callId, "FAILED", errorMsg);
                 sendCallStatusUpdate(comPort, targetPhone, "FAILED", 0, "Không thể mở cổng COM");
                 if (serviceCode != null && orderId != null) {
-                    notifyRemoteCallStatus("FAILED", comPort, simPhone, targetPhone, orderId, serviceCode);
+                    recordLocalCallStatus("FAILED", comPort, simPhone, targetPhone, orderId, serviceCode);
                 }
                 return;
             }
@@ -1302,7 +1284,7 @@ public class GsmService {
                 updateCallStatus(callId, "FAILED", errorMsg);
                 sendCallStatusUpdate(comPort, targetPhone, "FAILED", 0, "Không thể mở cổng COM: " + resolvedPort);
                 if (serviceCode != null && orderId != null) {
-                    notifyRemoteCallStatus("FAILED", comPort, simPhone, targetPhone, orderId, serviceCode);
+                    recordLocalCallStatus("FAILED", comPort, simPhone, targetPhone, orderId, serviceCode);
                 }
                 return;
             }
@@ -1320,7 +1302,7 @@ public class GsmService {
             updateCallStatus(callId, "DIALING", null);
             sendCallStatusUpdate(comPort, targetPhone, "DIALING", 0, "Đang quay số...");
             if (serviceCode != null && orderId != null) {
-                notifyRemoteCallStatus("DIALING", comPort, simPhone, targetPhone, orderId, serviceCode);
+                recordLocalCallStatus("DIALING", comPort, simPhone, targetPhone, orderId, serviceCode);
             }
 
             // Make call
@@ -1331,7 +1313,7 @@ public class GsmService {
                 updateCallStatus(callId, "FAILED", "Dial failed: " + dialResponse);
                 sendCallStatusUpdate(comPort, targetPhone, "FAILED", 0, "Không thể gọi: " + dialResponse);
                 if (serviceCode != null && orderId != null) {
-                    notifyRemoteCallStatus("FAILED", comPort, simPhone, targetPhone, orderId, serviceCode);
+                    recordLocalCallStatus("FAILED", comPort, simPhone, targetPhone, orderId, serviceCode);
                 }
                 return;
             }
@@ -1341,7 +1323,7 @@ public class GsmService {
             sendCallStatusUpdate(comPort, targetPhone, "RINGING", 0, "Đang đổ chuông...");
             // ✅ Notify remote for RINGING status
             if (serviceCode != null && orderId != null) {
-                notifyRemoteCallStatus("RINGING", comPort, simPhone, targetPhone, orderId, serviceCode);
+                recordLocalCallStatus("RINGING", comPort, simPhone, targetPhone, orderId, serviceCode);
             }
 
             // ✅ MATCHED WITH PortWorker: Poll CLCC to monitor call state
@@ -1419,7 +1401,7 @@ public class GsmService {
                                     updateCallStartTime(callId);
                                     sendCallStatusUpdate(comPort, targetPhone, "IN_CALL", 0, "Đã kết nối");
                                     if (serviceCode != null && orderId != null) {
-                                        notifyRemoteCallStatus("IN_CALL", comPort, simPhone, targetPhone, orderId,
+                                        recordLocalCallStatus("IN_CALL", comPort, simPhone, targetPhone, orderId,
                                                 serviceCode);
                                     }
                                     log.info("📞 [{}] ✅ CALL CONNECTED (CLCC stat=0, confirm={})", comPort,
@@ -1482,7 +1464,7 @@ public class GsmService {
                 updateCallStatus(callId, "FAILED", failReason);
                 sendCallStatusUpdate(comPort, targetPhone, wsStatus, 0, failReason);
                 if (serviceCode != null && orderId != null) {
-                    notifyRemoteCallStatus(wsStatus, comPort, simPhone, targetPhone, orderId, serviceCode);
+                    recordLocalCallStatus(wsStatus, comPort, simPhone, targetPhone, orderId, serviceCode);
                 }
                 log.warn("❌ [{}] Call to {} {} - {}", comPort, targetPhone, wsStatus, failReason);
 
@@ -1626,7 +1608,7 @@ public class GsmService {
 
                                 // ✅ Send WebSocket notification if remote call
                                 if (finalServiceCode != null && finalOrderId != null) {
-                                    notifyRemoteCallStatus("DOWNLOADING_RECORDING", comPort, finalSimPhone,
+                                    recordLocalCallStatus("DOWNLOADING_RECORDING", comPort, finalSimPhone,
                                             targetPhone, finalOrderId, finalServiceCode, 0,
                                             "Bắt đầu tải file ghi âm...");
                                 }
@@ -1699,7 +1681,7 @@ public class GsmService {
                                     }
 
                                     // Send remote callback (API + DB + WebSocket)
-                                    sendRemoteCallback(comPort, finalSimPhone, targetPhone,
+                                    saveLocalCallResult(comPort, finalSimPhone, targetPhone,
                                             callStartTime, callEndTime, uploadedUrl,
                                             finalOrderId, reportedDuration, true,
                                             null, finalServiceCode);
@@ -1712,7 +1694,7 @@ public class GsmService {
 
                                 // ✅ Send failure callback if remote call
                                 if (finalServiceCode != null && finalOrderId != null) {
-                                    sendRemoteCallback(comPort, finalSimPhone, targetPhone,
+                                    saveLocalCallResult(comPort, finalSimPhone, targetPhone,
                                             callStartTime, callEndTime, null,
                                             finalOrderId, reportedDuration, true,
                                             "RECORDING_FAILED: " + e.getMessage(), finalServiceCode);
@@ -1728,7 +1710,7 @@ public class GsmService {
                         final String finalSimPhone = simPhone;
 
                         scheduler.submit(() -> {
-                            sendRemoteCallback(comPort, finalSimPhone, targetPhone,
+                            saveLocalCallResult(comPort, finalSimPhone, targetPhone,
                                     callStartTime, callEndTime, null,
                                     finalOrderId, reportedDuration, true,
                                     null, finalServiceCode);
@@ -1785,7 +1767,7 @@ public class GsmService {
                                         uploadedUrl = uploadRecordingFile(downloadedFile.getAbsolutePath(),
                                                 comPort, errSimPhone, errOrderId, errServiceCode);
                                     }
-                                    sendRemoteCallback(comPort, errSimPhone, targetPhone,
+                                    saveLocalCallResult(comPort, errSimPhone, targetPhone,
                                             Instant.now().minusSeconds(30), Instant.now(), uploadedUrl,
                                             errOrderId, 0, true,
                                             "HANGUP_ERROR_WITH_RECORDING", errServiceCode);
@@ -1863,7 +1845,7 @@ public class GsmService {
                                     uploadedUrl = uploadRecordingFile(downloadedFile.getAbsolutePath(),
                                             comPort, errSimPhone, errOrderId, errServiceCode);
                                 }
-                                sendRemoteCallback(comPort, errSimPhone, targetPhone,
+                                saveLocalCallResult(comPort, errSimPhone, targetPhone,
                                         Instant.now().minusSeconds(30), Instant.now(), uploadedUrl,
                                         errOrderId, 0, wasConnectedFinal,
                                         "CALL_ERROR_WITH_RECORDING", errServiceCode);
@@ -1873,7 +1855,7 @@ public class GsmService {
                                     recEx.getMessage());
                             // Gửi callback lỗi nếu là remote call
                             if (errServiceCode != null && errOrderId != null) {
-                                sendRemoteCallback(comPort, errSimPhone, targetPhone,
+                                saveLocalCallResult(comPort, errSimPhone, targetPhone,
                                         Instant.now().minusSeconds(30), Instant.now(), null,
                                         errOrderId, 0, wasConnectedFinal,
                                         "RECORDING_RECOVERY_FAILED: " + recEx.getMessage(), errServiceCode);
@@ -2519,7 +2501,7 @@ public class GsmService {
 
                             // Send to remote server if this is a remote call
                             if (orderId != null && serviceCode != null && targetPhone != null) {
-                                notifyRemoteCallStatus("RECORDING_DOWNLOAD", comPort, simPhone, targetPhone,
+                                recordLocalCallStatus("RECORDING_DOWNLOAD", comPort, simPhone, targetPhone,
                                         orderId, serviceCode, percent, progressMsg);
                             }
                         }
@@ -3272,16 +3254,16 @@ public class GsmService {
     }
 
     // ==================================================================================
-    // ✅ REMOTE CALLBACK METHODS (for RemoteCallOutSubscriberConfig)
+    // LOCAL CALL RESULT HELPERS
     // ==================================================================================
 
     /**
      * Notify remote server via WebSocket about call status
      * Similar to PortWorker.notifyCallStatus()
      */
-    private void notifyRemoteCallStatus(String status, String comPort, String simPhone,
+    private void recordLocalCallStatus(String status, String comPort, String simPhone,
             String targetPhone, String orderId, String serviceCode) {
-        notifyRemoteCallStatus(status, comPort, simPhone, targetPhone, orderId, serviceCode, null, null);
+        recordLocalCallStatus(status, comPort, simPhone, targetPhone, orderId, serviceCode, null, null);
     }
 
     /**
@@ -3297,50 +3279,10 @@ public class GsmService {
      * @param progress    Optional progress percentage (0-100) for download status
      * @param message     Optional message
      */
-    private void notifyRemoteCallStatus(String status, String comPort, String simPhone,
+    private void recordLocalCallStatus(String status, String comPort, String simPhone,
             String targetPhone, String orderId, String serviceCode, Integer progress, String message) {
-        try {
-            if (remoteWsClient == null || !remoteWsClient.isConnected()) {
-                log.debug("⚠️ [{}] RemoteWsClient unavailable, status not sent: {}", comPort, status);
-                return;
-            }
-
-            // Get SIM to extract deviceName
-            Sim sim = simRepository.findFirstByDeviceNameAndComName(localDeviceName, comPort).orElse(null);
-            String deviceName = (sim != null) ? sim.getDeviceName() : "UNKNOWN";
-
-            Map<String, Object> event = new HashMap<>();
-            event.put("orderId", orderId);
-            event.put("service", serviceCode);
-            event.put("status", status);
-            event.put("deviceName", deviceName);
-            event.put("phone", targetPhone);
-            event.put("fromNumber", simPhone);
-            event.put("com", comPort);
-            event.put("timestamp", Instant.now().toEpochMilli());
-
-            // Add progress if provided (for download status)
-            if (progress != null) {
-                event.put("progress", progress);
-            }
-
-            // Add message if provided
-            if (message != null) {
-                event.put("message", message);
-            }
-
-            remoteWsClient.send("/topic/receive-call", event);
-
-            if (progress != null) {
-                log.info("📡 [{}] Remote WS sent: status={} progress={}% orderId={}", comPort, status, progress,
-                        orderId);
-            } else {
-                log.info("📡 [{}] Remote WS sent: status={} orderId={}", comPort, status, orderId);
-            }
-
-        } catch (Exception e) {
-            log.warn("⚠️ [{}] Failed to send remote call status: {}", comPort, e.getMessage());
-        }
+        log.debug("📋 [{}] Call status local: status={}, target={}, progress={}, message={}",
+                comPort, status, targetPhone, progress, message);
     }
 
     /**
@@ -3349,95 +3291,29 @@ public class GsmService {
      */
     private String uploadRecordingFile(String localPath, String comPort, String simPhone,
             String orderId, String serviceCode) {
-        log.info("☁️ [{}] Starting recording upload...", comPort);
-
-        try {
-            File file = new File(localPath);
-            if (!file.exists() || file.length() == 0) {
-                log.error("❌ [{}] Upload failed: file not found or empty", comPort);
-                return null;
-            }
-
-            log.info("✅ [{}] File verified: {} ({} bytes)", comPort, file.getName(), file.length());
-
-            String uploadUrl = getUploadUrl();
-            log.info("☁️ [{}] Upload URL: {}", comPort, uploadUrl);
-
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("file", new FileSystemResource(file));
-            body.add("simNumber", simPhone);
-            if (orderId != null)
-                body.add("orderId", orderId);
-            if (serviceCode != null)
-                body.add("serviceCode", serviceCode);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
-
-            RestTemplate restTemplate = new RestTemplate();
-            long uploadStart = System.currentTimeMillis();
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    uploadUrl, HttpMethod.POST, request,
-                    new ParameterizedTypeReference<Map<String, Object>>() {
-                    });
-
-            long uploadDuration = System.currentTimeMillis() - uploadStart;
-            log.info("☁️ [{}] Upload completed in {}ms", comPort, uploadDuration);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                Map<String, Object> resp = response.getBody();
-                String returnedUrl = (resp != null && resp.get("url") != null)
-                        ? String.valueOf(resp.get("url"))
-                        : null;
-
-                if (returnedUrl != null) {
-                    log.info("✅ [{}] Upload SUCCESS! URL: {}", comPort, returnedUrl);
-
-                    // ✅ KEEP local file for UI playback (don't delete)
-                    // Delete local file after successful upload
-                    // try {
-                    // Files.deleteIfExists(file.toPath());
-                    // log.info("🗑️ [{}] Local file deleted: {}", comPort, file.getName());
-                    // } catch (Exception e) {
-                    // log.warn("⚠️ [{}] Could not delete local file: {}", comPort, e.getMessage());
-                    // }
-
-                    return returnedUrl;
-                } else {
-                    log.error("❌ [{}] Upload returned 200 but no URL in response", comPort);
-                }
-            } else {
-                log.error("❌ [{}] Upload failed with HTTP {}", comPort, response.getStatusCode());
-            }
-
-        } catch (Exception e) {
-            log.error("❌ [{}] Upload exception: {}", comPort, e.getMessage());
+        File file = new File(localPath);
+        if (!file.isFile() || file.length() == 0) {
+            log.error("❌ [{}] Recording không tồn tại hoặc rỗng: {}", comPort, localPath);
+            return null;
         }
-
-        return null;
+        log.info("💾 [{}] Giữ recording tại máy: {}", comPort, file.getAbsolutePath());
+        return file.getAbsolutePath();
     }
 
     /**
      * Send callback to remote API server
      * Similar to PortWorker.sendCallCallback()
      */
-    private void sendRemoteCallback(String comPort, String simPhone, String targetPhone,
+    private void saveLocalCallResult(String comPort, String simPhone, String targetPhone,
             Instant startTime, Instant endTime, String recordingUrl,
             String orderId, long connectedDuration, boolean connected,
             String failReason, String serviceCode) {
         try {
-            // Get SIM for cloudGateway callback
             Sim sim = simRepository.findFirstByDeviceNameAndComName(localDeviceName, comPort).orElse(null);
             if (sim == null) {
                 log.warn("⚠️ [{}] Cannot find SIM for callback", comPort);
                 return;
             }
-
-            // Send to CloudGateway API
-            cloudGateway.sendCallRecord(sim, targetPhone, startTime, endTime, recordingUrl,
-                    orderId, connectedDuration, connected);
 
             // Save to local DB
             if (callMessageRepository != null) {
@@ -3460,7 +3336,7 @@ public class GsmService {
             }
 
             // Send final WebSocket notification
-            notifyRemoteCallStatus("ENDED_SUCCESS", comPort, simPhone, targetPhone, orderId, serviceCode);
+            recordLocalCallStatus("ENDED_SUCCESS", comPort, simPhone, targetPhone, orderId, serviceCode);
 
             if (failReason != null) {
                 log.info("📊 [{}] Callback - FAILED: {}", comPort, failReason);
@@ -3473,14 +3349,6 @@ public class GsmService {
         } catch (Exception e) {
             log.error("❌ [{}] Failed to send callback: {}", comPort, e.getMessage());
         }
-    }
-
-    /**
-     * Get upload URL for recording files
-     */
-    private String getUploadUrl() {
-        // TODO: Make this configurable via application.properties
-        return "https://be-dashboard-sms-global.smsglobalhub.com/api/upload/record";
     }
 
 }

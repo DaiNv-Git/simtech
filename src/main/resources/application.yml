@@ -2,89 +2,64 @@ server:
   port: 8080
 
 spring:
-  # ===== H2 Embedded Database (mỗi máy có data riêng) =====
+  application:
+    name: simTech
+  config:
+    import: optional:file:.env[.properties]
   datasource:
     url: jdbc:h2:file:./data/gsm_db;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
     username: sa
-    password: 
-  
+    password:
   h2:
     console:
       enabled: true
       path: /h2-console
-  
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
     show-sql: false
-  
-  # ===== MongoDB (giữ lại cho backward compatibility) =====
   data:
     mongodb:
-      uri: 'mongodb://admin:MongoAdmin%402026%21Secure@72.60.41.168:27017/JapanSim?authSource=admin'
+      # Dùng cùng Mongo server cũ nhưng database mới phải là "simtech".
+      uri: ${MONGODB_URI}
       auto-index-creation: true
 
-# ===== GSM Configuration =====
 gsm:
-  # Default settings
   otp-only: true
   disable-data-on-startup: true
-  default-call-duration: 10  # giây
+  default-call-duration: 10
   auto-record: true
-  recording-path: C:/recording
+  recording-path: ${RECORDING_PATH:C:/recording}
   auto-scan-on-startup: true
+  test-mode: false
+  test-call-mode: false
   sms:
     min-interval-ms: 3000
     jitter-ms: 3000
     backup-scan-delay-ms: 5000
-  
-  # API settings
-  api:
-    base-url: https://be-user-sms-global.smsglobalhub.com/
-  order-api:
-    base-url: https://be-user-sms-global.smsglobalhub.com/
-  
-  # Test mode
-  test-mode: true
-  test-call-mode: true
-  
-  # Recording upload
-  record:
-    public-url: https://be-user-sms-global.smsglobalhub.com/uploads/records/
-    upload-url: https://be-user-sms-global.smsglobalhub.com/api/upload/record
-    callback-url: https://be-user-sms-global.smsglobalhub.com/api/gsm/call/receive
-    upload-dir: /var/www/html/recordings
-  
   recording:
-    local-temp: C:/recording/temp
+    local-temp: ${RECORDING_TEMP_PATH:C:/recording/temp}
 
-# ===== Recording Configuration =====
 recording:
   save:
-    path: C:/recording
+    path: ${RECORDING_PATH:C:/recording}
 
-# ===== SSH for remote upload (optional) =====
-ssh:
-  host: 72.60.41.168
-  port: 22
-  user: root
-  password: jKvsfhgcGSvw198@
+proxy:
+  enabled: false
+  base-port: 10001
+  default-apn: rakuten.jp
+  health-check-interval: 30000
 
-# ===== Ngrok (optional) =====
-ngrok:
-  authtoken: 2MyHVayjeJn15C5COX0cKF08l2N_3b37j2Uj7scvm5i1fdNAU
+# ===== Telegram notifications =====
+telegram:
+  enabled: ${TELEGRAM_ENABLED:false}
+  bot-token: ${TELEGRAM_BOT_TOKEN:}
+  chat-id: ${TELEGRAM_CHAT_ID:}
 
 # ===== Logging =====
 logging:
   level:
     app.simsmartgsm: INFO
     org.springframework: WARN
-
-# ===== Proxy Configuration =====
-proxy:
-  enabled: false
-  base-port: 10001        # Port bắt đầu cho proxy (mỗi SIM +1)
-  default-apn: rakuten.jp   # APN mặc định (Rakuten: rakuten.jp, Docomo: spmode.ne.jp)
-  health-check-interval: 30000  # ms giữa mỗi lần health check

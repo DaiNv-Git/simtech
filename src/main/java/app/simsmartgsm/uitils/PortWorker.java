@@ -1,11 +1,9 @@
 
 package app.simsmartgsm.uitils;
 
-import app.simsmartgsm.baseGateway.CloudGateway;
 import app.simsmartgsm.baseGateway.GsmProperties;
 import app.simsmartgsm.config.SmsParser;
 import app.simsmartgsm.dto.response.SmsMessageUser;
-import app.simsmartgsm.config.RemoteWsClient;
 import app.simsmartgsm.entity.CallMessage;
 import app.simsmartgsm.entity.Sim;
 import app.simsmartgsm.repository.CallMessageRepository;
@@ -66,7 +64,6 @@ public class PortWorker implements Runnable, AutoCloseable {
 
     // Mặc định (có thể thay bằng cấu hình ứng dụng).
     private static final Path DEFAULT_RECORD_DIR = Paths.get("C:\\recordings");
-    private static final String DEFAULT_UPLOAD_URL = "https://be-dashboard-sms-global.smsglobalhub.com/api/upload/record";
     private static final String MODEM_STORAGE_PREFIX = "UFS:";
     private static final int FILE_READ_CHUNK_BYTES = 2048;
 
@@ -106,16 +103,10 @@ public class PortWorker implements Runnable, AutoCloseable {
     }
 
     // ======================================================================
-    // DEPENDENCIES
-    // ======================================================================
-    private final RemoteWsClient remoteWsClient;
-
-    // ======================================================================
     // STATE & DEPENDENCIES
     // ======================================================================
     private final Sim sim;
     private final GsmListenerService listenerService;
-    private final CloudGateway cloudGateway;
     private final CallMessageRepository callMessageRepository;
     private final app.simsmartgsm.service.CallService callService;
     private final app.simsmartgsm.service.SmsDailyLimitService smsDailyLimitService;
@@ -208,16 +199,12 @@ public class PortWorker implements Runnable, AutoCloseable {
     // ======================================================================
     public PortWorker(Sim sim,
             GsmListenerService listenerService,
-            CloudGateway cloudGateway,
-            RemoteWsClient remoteWsClient,
             CallMessageRepository callMessageRepository,
             app.simsmartgsm.service.CallService callService,
             app.simsmartgsm.service.SmsDailyLimitService smsDailyLimitService,
             GsmProperties gsmProperties) {
-        this.remoteWsClient = remoteWsClient;
         this.sim = sim;
         this.listenerService = listenerService;
-        this.cloudGateway = cloudGateway;
         this.callMessageRepository = callMessageRepository;
         this.callService = callService;
         this.smsDailyLimitService = smsDailyLimitService;
@@ -4005,104 +3992,13 @@ public class PortWorker implements Runnable, AutoCloseable {
     // ======================================================================
     private String uploadRecordFile(String localPath, String orderId, String serviceCode) {
         final String com = sim.getComName();
-
-        log.info("☁️ [{}] ═══════════════════════════════════════", com);
-        log.info("☁️ [{}] STARTING UPLOAD PROCESS", com);
-        log.info("☁️ [{}] ═══════════════════════════════════════", com);
-
-        try {
-            // Step 1: Verify file exists
-            File file = new File(localPath);
-            if (!file.exists()) {
-                log.error("❌ [{}] UPLOAD FAILED: File not found: {}", com, localPath);
-                return null;
-            }
-            if (file.length() == 0) {
-                log.error("❌ [{}] UPLOAD FAILED: File is empty: {}", com, localPath);
-                return null;
-            }
-
-            log.info("✅ [{}] File verified: {} ({} bytes)", com, file.getName(), file.length());
-
-            // Step 2: Prepare upload
-            String uploadUrl = getUploadUrl();
-            log.info("☁️ [{}] Upload URL: {}", com, uploadUrl);
-            log.info("☁️ [{}] orderId: {}", com, orderId);
-            log.info("☁️ [{}] serviceCode: {}", com, serviceCode);
-
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("file", new FileSystemResource(file));
-            body.add("simNumber", sim.getPhoneNumber());
-            if (orderId != null)
-                body.add("orderId", orderId);
-            if (serviceCode != null)
-                body.add("serviceCode", serviceCode);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
-            RestTemplate restTemplate = new RestTemplate();
-
-            // Step 3: Upload to server (BLOCKING)
-            log.info("☁️ [{}] Uploading {} bytes... (this may take a while)", com, file.length());
-            long uploadStart = System.currentTimeMillis();
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    uploadUrl,
-                    HttpMethod.POST,
-                    request,
-                    new ParameterizedTypeReference<Map<String, Object>>() {
-                    });
-
-            long uploadDuration = System.currentTimeMillis() - uploadStart;
-            log.info("☁️ [{}] Upload completed in {}ms", com, uploadDuration);
-
-            // Step 4: Parse response
-            if (response.getStatusCode().is2xxSuccessful()) {
-                Map<String, Object> resp = response.getBody();
-                String returnedUrl = null;
-                if (resp != null && resp.get("url") != null) {
-                    returnedUrl = String.valueOf(resp.get("url"));
-                }
-
-                if (returnedUrl != null) {
-                    log.info("✅ [{}] ═══════════════════════════════════════", com);
-                    log.info("✅ [{}] UPLOAD SUCCESS!", com);
-                    log.info("✅ [{}] URL: {}", com, returnedUrl);
-                    log.info("✅ [{}] ═══════════════════════════════════════", com);
-                } else {
-                    log.error("❌ [{}] Upload returned HTTP 200 but no URL in response!", com);
-                    log.error("❌ [{}] Response body: {}", com, resp);
-                }
-
-                // Xóa file local sau khi upload thành công
-                try {
-                    Files.deleteIfExists(file.toPath());
-                    log.info("🗑️ [{}] Local file deleted: {}", com, file.getName());
-                } catch (Exception e) {
-                    log.warn("⚠️ [{}] Could not delete local file: {}", com, e.getMessage());
-                }
-
-                return returnedUrl;
-            } else {
-                log.error("❌ [{}] ═══════════════════════════════════════", com);
-                log.error("❌ [{}] UPLOAD FAILED!", com);
-                log.error("❌ [{}] HTTP Status: {}", com, response.getStatusCode());
-                log.error("❌ [{}] ═══════════════════════════════════════", com);
-                return null;
-            }
-
-        } catch (Exception e) {
-            log.error("❌ [{}] ═══════════════════════════════════════", com);
-            log.error("❌ [{}] UPLOAD EXCEPTION!", com);
-            log.error("❌ [{}] Error: {} - {}", com, e.getClass().getSimpleName(), e.getMessage());
-            log.error("❌ [{}] ═══════════════════════════════════════", com);
-            if (e.getCause() != null) {
-                log.error("❌ [{}] Cause: {}", com, e.getCause().getMessage());
-            }
+        File file = new File(localPath);
+        if (!file.isFile() || file.length() == 0) {
+            log.error("❌ [{}] Recording không tồn tại hoặc rỗng: {}", com, localPath);
             return null;
         }
+        log.info("💾 [{}] Giữ recording tại máy: {} ({} bytes)", com, file.getAbsolutePath(), file.length());
+        return file.getAbsolutePath();
     }
 
     // ======================================================================
@@ -4117,11 +4013,7 @@ public class PortWorker implements Runnable, AutoCloseable {
         }
 
         try {
-            // ✅ EXISTING: Send to backend
-            cloudGateway.sendCallRecord(sim, task.to, start, end, uploadedUrl,
-                    task.orderId, connectedDuration, connected);
-
-            // ✅ NEW: Save CallMessage to local database
+            // Lưu lịch sử cuộc gọi tại máy; không callback tới web cũ.
             if (callMessageRepository != null) {
                 String status;
                 if (failReason != null) {
@@ -4176,38 +4068,8 @@ public class PortWorker implements Runnable, AutoCloseable {
      */
     private void notifyCallStatus(String status, Task task, Integer progress, String message) {
         try {
-            Map<String, Object> event = new HashMap<>();
-            event.put("orderId", task.orderId);
-            event.put("service", task.serviceCode);
-            event.put("status", status);
-            event.put("deviceName", sim.getDeviceName());
-            event.put("phone", task.to);
-            event.put("fromNumber", sim.getPhoneNumber());
-            event.put("com", sim.getComName());
-            event.put("timestamp", Instant.now().toEpochMilli());
-
-            // Add progress if provided
-            if (progress != null) {
-                event.put("progress", progress);
-            }
-
-            // Add message if provided
-            if (message != null) {
-                event.put("message", message);
-            }
-
-            if (remoteWsClient != null && remoteWsClient.isConnected()) {
-                remoteWsClient.send("/topic/receive-call", event);
-                if (progress != null) {
-                    log.info("📡 [{}] WS SENT REMOTE: status={} progress={}%", sim.getComName(), status, progress);
-                } else {
-                    log.info("📡 [{}] WS SENT REMOTE TOPIC: {}", sim.getComName(), event);
-                }
-            } else {
-                log.warn("⚠️ [{}] RemoteWsClient unavailable, call status not sent remotely: {}",
-                        sim.getComName(), status);
-                log.debug("📋 [{}] Call event (not sent): {}", sim.getComName(), event);
-            }
+            log.debug("📋 [{}] Call status local: status={}, target={}, progress={}, message={}",
+                    sim.getComName(), status, task.to, progress, message);
 
         } catch (Exception e) {
             log.warn("⚠️ [{}] notifyCallStatus error: {}", sim.getComName(), e.getMessage());
@@ -4275,10 +4137,6 @@ public class PortWorker implements Runnable, AutoCloseable {
             log.warn("⚠️ Cannot ensure recording directory {}: {}", DEFAULT_RECORD_DIR, e.getMessage());
         }
         return DEFAULT_RECORD_DIR;
-    }
-
-    private String getUploadUrl() {
-        return DEFAULT_UPLOAD_URL;
     }
 
     // ======================================================================

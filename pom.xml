@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>app</groupId>
-	<artifactId>simsmart-gsm</artifactId>
+	<artifactId>simtech</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>simsmart-gsm</name>
-	<description>simsmart-gsm</description>
+	<name>simTech</name>
+	<description>Local GSM desktop tool with Telegram notifications</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -99,10 +99,6 @@
 			<classifier>win</classifier>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.httpcomponents.client5</groupId>
-			<artifactId>httpclient5</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>2.8.3</version>
@@ -110,10 +106,6 @@
 		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
 			<artifactId>httpclient5</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-mongodb</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -269,10 +261,10 @@
 						<goals><goal>launch4j</goal></goals>
 						<configuration>
 							<headerType>gui</headerType>
-							<outfile>${project.build.directory}/SimSmartGSM.exe</outfile>
-							<jar>simsmart-gsm.jar</jar>
+							<outfile>${project.build.directory}/simTech.exe</outfile>
+							<jar>simtech.jar</jar>
 							<dontWrapJar>true</dontWrapJar>
-							<errTitle>SimSmart GSM Error</errTitle>
+							<errTitle>simTech Error</errTitle>
 							<jre>
 								<path>./jdk</path>
 								<bundledJre64Bit>true</bundledJre64Bit>
@@ -287,13 +279,13 @@
 							<versionInfo>
 								<fileVersion>1.0.0.0</fileVersion>
 								<txtFileVersion>1.0.0</txtFileVersion>
-								<fileDescription>SimSmart GSM</fileDescription>
+								<fileDescription>simTech GSM SMS Tool</fileDescription>
 								<copyright>2026</copyright>
 								<productVersion>1.0.0.0</productVersion>
 								<txtProductVersion>1.0.0</txtProductVersion>
-								<productName>SimSmart GSM</productName>
-								<internalName>simsmart</internalName>
-								<originalFilename>SimSmartGSM.exe</originalFilename>
+								<productName>simTech</productName>
+								<internalName>simtech</internalName>
+								<originalFilename>simTech.exe</originalFilename>
 							</versionInfo>
 						</configuration>
 					</execution>

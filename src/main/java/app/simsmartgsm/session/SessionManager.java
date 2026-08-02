@@ -1,7 +1,5 @@
 package app.simsmartgsm.session;
 
-import app.simsmartgsm.baseGateway.CloudGateway;
-import app.simsmartgsm.config.RemoteWsClient;
 import app.simsmartgsm.entity.Sim;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,11 +16,7 @@ import java.util.concurrent.*;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class SessionManager {
-
-    private final CloudGateway cloudGateway;
-    private final RemoteWsClient remoteWsClient;
 
     /**
      * Map: COM port → SessionExecutor
@@ -65,8 +59,7 @@ public class SessionManager {
         SessionExecutor executor = getOrCreateExecutor(comPort);
 
         return executor.submit(new CallOutTask(
-                sim, targetPhone, durationSeconds, record, serviceCode, orderId,
-                cloudGateway, remoteWsClient));
+                sim, targetPhone, durationSeconds, record, serviceCode, orderId));
     }
 
     /**
@@ -90,8 +83,7 @@ public class SessionManager {
         return executor.submit(new CallWithAudioTask(
                 sim, targetPhone, audioFileName, localAudioPath,
                 repeatAudio, waitAfterAudioSeconds, record,
-                serviceCode, orderId,
-                cloudGateway, remoteWsClient));
+                serviceCode, orderId));
     }
 
     /**
@@ -112,8 +104,7 @@ public class SessionManager {
 
         return executor.submit(new CallInTask(
                 sim, expectedCaller, durationSeconds, record,
-                acceptHidden, timeWindowSeconds, serviceCode, orderId,
-                cloudGateway, remoteWsClient));
+                acceptHidden, timeWindowSeconds, serviceCode, orderId));
     }
 
     /**

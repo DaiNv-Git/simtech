@@ -1,9 +1,7 @@
 package app.simsmartgsm.service;
 
-import app.simsmartgsm.config.RemoteSmsJobSubscriberConfig;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -24,11 +22,8 @@ import java.util.concurrent.TimeUnit;
  * - Cảnh báo khi heap > 90%
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class HeapMonitorService {
-
-    private final RemoteSmsJobSubscriberConfig remoteSmsJobSubscriber;
 
     private ScheduledExecutorService scheduler;
     private final MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
@@ -142,16 +137,7 @@ public class HeapMonitorService {
 
             log.info("🧹 Starting cleanup...");
 
-            // 1. Dọn inbound guard (messages cũ)
-            int inboundBefore = remoteSmsJobSubscriber.getInboundGuardSize();
-            remoteSmsJobSubscriber.cleanupInboundGuard();
-            int inboundAfter = remoteSmsJobSubscriber.getInboundGuardSize();
-
-            if (inboundBefore > inboundAfter) {
-                log.info("   Cleaned {} inbound guard entries", inboundBefore - inboundAfter);
-            }
-
-            // 2. Chạy GC sau khi cleanup
+            // Không còn cache WebSocket remote; chỉ gợi ý GC cho cache nội bộ.
             suggestGC();
 
             lastCleanupTime = now;

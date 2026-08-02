@@ -1,6 +1,5 @@
 package app.simsmartgsm.config;
 
-import app.simsmartgsm.baseGateway.CloudGateway;
 import app.simsmartgsm.baseGateway.GsmProperties;
 import app.simsmartgsm.entity.Sim;
 import app.simsmartgsm.repository.CallMessageRepository;
@@ -38,8 +37,6 @@ public class ComManager {
 
     private static ComManager INSTANCE;
 
-    private final RemoteWsClient remoteWsClient;
-
     /** Danh sách các PortWorker đang hoạt động, key = COM name */
     private final ConcurrentHashMap<String, PortWorker> workers = new ConcurrentHashMap<>();
 
@@ -54,24 +51,19 @@ public class ComManager {
     private final Set<String> lockedPorts = ConcurrentHashMap.newKeySet();
 
     private final GsmListenerService gsmListenerService;
-    private final CloudGateway cloudGateway;
     private final SimRepository simRepository;
     private final CallMessageRepository callMessageRepository;
     private final app.simsmartgsm.service.CallService callService;
     private final app.simsmartgsm.service.SmsDailyLimitService smsDailyLimitService; // ✅ Daily SMS limit
     private final GsmProperties gsmProperties;
 
-    public ComManager(RemoteWsClient remoteWsClient,
-            @Lazy GsmListenerService gsmListenerService,
-            CloudGateway cloudGateway,
+    public ComManager(@Lazy GsmListenerService gsmListenerService,
             SimRepository simRepository,
             CallMessageRepository callMessageRepository,
             @Lazy app.simsmartgsm.service.CallService callService,
             app.simsmartgsm.service.SmsDailyLimitService smsDailyLimitService,
             GsmProperties gsmProperties) {
-        this.remoteWsClient = remoteWsClient;
         this.gsmListenerService = gsmListenerService;
-        this.cloudGateway = cloudGateway;
         this.simRepository = simRepository;
         this.callMessageRepository = callMessageRepository;
         this.callService = callService;
@@ -162,14 +154,12 @@ public class ComManager {
             workers.remove(com);
         }
 
-        // ⚙️ Tạo mới worker (luôn truyền remoteWsClient đầy đủ)
+        // ⚙️ Tạo mới worker local
         // ✅ OPTIMIZE: Aggressive polling - 1000ms (do URC không hoạt động trên nhiều
         // module)
         PortWorker w = new PortWorker(
                 sim,
                 gsmListenerService,
-                cloudGateway,
-                remoteWsClient,
                 callMessageRepository,
                 callService,
                 smsDailyLimitService,
@@ -234,8 +224,6 @@ public class ComManager {
         PortWorker worker = new PortWorker(
                 sim,
                 listener != null ? listener : gsmListenerService,
-                cloudGateway,
-                remoteWsClient,
                 callMessageRepository,
                 callService,
                 smsDailyLimitService,

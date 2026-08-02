@@ -1,7 +1,5 @@
 package app.simsmartgsm.session;
 
-import app.simsmartgsm.baseGateway.CloudGateway;
-import app.simsmartgsm.config.RemoteWsClient;
 import app.simsmartgsm.uitils.AtCommandHelper;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +30,6 @@ public class CallWithAudioSession implements TaskSession {
     private static final int BAUD_RATE = 115200;
 
     private final CallWithAudioTask task;
-    private final CloudGateway cloudGateway;
-    private final RemoteWsClient remoteWsClient;
 
     private SerialPort port;
     private AtCommandHelper helper;
@@ -44,10 +40,8 @@ public class CallWithAudioSession implements TaskSession {
     private boolean audioPlayed = false;
     private long connectedDuration = 0;
 
-    public CallWithAudioSession(CallWithAudioTask task, CloudGateway cloudGateway, RemoteWsClient remoteWsClient) {
+    public CallWithAudioSession(CallWithAudioTask task) {
         this.task = task;
-        this.cloudGateway = cloudGateway;
-        this.remoteWsClient = remoteWsClient;
     }
 
     @Override
@@ -204,18 +198,6 @@ public class CallWithAudioSession implements TaskSession {
                 stopRecording();
                 // TODO: Download and upload recording (same as CallOutSession)
             }
-
-            // ✅ Step 12: Send callback
-            cloudGateway.sendCallRecord(
-                    task.getSim(),
-                    task.getTargetPhone(),
-                    callStartTime,
-                    callEndTime,
-                    uploadedUrl,
-                    task.getOrderId(),
-                    task.getServiceCode(),
-                    connectedDuration,
-                    callConnected);
 
             String status = callConnected ? (audioPlayed ? "SUCCESS" : "AUDIO_FAILED") : "NO_ANSWER";
             notifyStatus(status);
@@ -495,24 +477,8 @@ public class CallWithAudioSession implements TaskSession {
 
     private void notifyStatus(String status, Integer progress, String message) {
         try {
-            Map<String, Object> event = new HashMap<>();
-            event.put("orderId", task.getOrderId());
-            event.put("service", task.getServiceCode());
-            event.put("status", status);
-            event.put("taskType", "CALL_WITH_AUDIO");
-            event.put("deviceName", task.getSim().getDeviceName());
-            event.put("phone", task.getTargetPhone());
-            event.put("audioFile", task.getAudioFileName());
-            event.put("fromNumber", task.getSim().getPhoneNumber());
-            event.put("com", task.getSim().getComName());
-            event.put("timestamp", Instant.now().toEpochMilli());
-
-            if (progress != null) event.put("progress", progress);
-            if (message != null) event.put("message", message);
-
-            if (remoteWsClient != null && remoteWsClient.isConnected()) {
-                remoteWsClient.send("/topic/receive-call", event);
-            }
+            log.debug("[{}] CALL_WITH_AUDIO local status={}, progress={}, message={}",
+                    task.getSim().getComName(), status, progress, message);
         } catch (Exception e) {
             log.debug("⚠️ Failed to notify status: {}", e.getMessage());
         }

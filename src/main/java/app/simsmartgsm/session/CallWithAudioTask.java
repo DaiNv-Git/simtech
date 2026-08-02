@@ -1,7 +1,5 @@
 package app.simsmartgsm.session;
 
-import app.simsmartgsm.baseGateway.CloudGateway;
-import app.simsmartgsm.config.RemoteWsClient;
 import app.simsmartgsm.entity.Sim;
 import lombok.Getter;
 
@@ -18,13 +16,9 @@ public class CallWithAudioTask extends SessionTask {
     private final boolean repeatAudio;
     private final int waitAfterAudioSeconds;
     private final boolean record;
-    private final CloudGateway cloudGateway;
-    private final RemoteWsClient remoteWsClient;
-
     public CallWithAudioTask(Sim sim, String targetPhone, String audioFileName,
             String localAudioPath, boolean repeatAudio, int waitAfterAudioSeconds,
-            boolean record, String serviceCode, String orderId,
-            CloudGateway cloudGateway, RemoteWsClient remoteWsClient) {
+            boolean record, String serviceCode, String orderId) {
         super(sim, serviceCode, orderId);
         this.targetPhone = targetPhone;
         this.audioFileName = audioFileName;
@@ -32,13 +26,11 @@ public class CallWithAudioTask extends SessionTask {
         this.repeatAudio = repeatAudio;
         this.waitAfterAudioSeconds = waitAfterAudioSeconds;
         this.record = record;
-        this.cloudGateway = cloudGateway;
-        this.remoteWsClient = remoteWsClient;
     }
 
     @Override
     public TaskSession createSession() throws Exception {
-        return new CallWithAudioSession(this, cloudGateway, remoteWsClient);
+        return new CallWithAudioSession(this);
     }
 
     @Override

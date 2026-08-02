@@ -1,7 +1,5 @@
 package app.simsmartgsm.session;
 
-import app.simsmartgsm.baseGateway.CloudGateway;
-import app.simsmartgsm.config.RemoteWsClient;
 import app.simsmartgsm.uitils.AtCommandHelper;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.extern.slf4j.Slf4j;
@@ -30,11 +28,8 @@ public class CallInSession implements TaskSession {
 
     private static final int BAUD_RATE = 115200;
     private static final Path RECORD_DIR = Paths.get("/home/record");
-    private static final String UPLOAD_URL = "http://localhost:8888/api/file/upload";
 
     private final CallInTask task;
-    private final CloudGateway cloudGateway;
-    private final RemoteWsClient remoteWsClient;
 
     private SerialPort port;
     private AtCommandHelper helper;
@@ -44,10 +39,8 @@ public class CallInSession implements TaskSession {
     private Instant callEndTime;
     private String callerNumber;
 
-    public CallInSession(CallInTask task, CloudGateway cloudGateway, RemoteWsClient remoteWsClient) {
+    public CallInSession(CallInTask task) {
         this.task = task;
-        this.cloudGateway = cloudGateway;
-        this.remoteWsClient = remoteWsClient;
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -159,9 +152,6 @@ public class CallInSession implements TaskSession {
                     uploadedUrl = uploadToServer(localFile);
                 }
             }
-
-            // Send to cloud
-            cloudGateway.forwardCall(task.getSim(), callerNumber, uploadedUrl);
 
             notifyStatus("SUCCESS");
 
@@ -582,56 +572,8 @@ public class CallInSession implements TaskSession {
     }
 
     private String uploadToServer(File file) {
-        // ✅ OPTIMIZATION: Upload retry with exponential backoff
-        int maxRetries = 3;
-        int[] delayMs = { 1000, 3000, 5000 }; // Exponential backoff
-
-        for (int attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-                body.add("file", new FileSystemResource(file));
-                body.add("simNumber", task.getSim().getPhoneNumber());
-                body.add("orderId", task.getOrderId());
-                body.add("serviceCode", task.getServiceCode());
-
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-                HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
-                RestTemplate restTemplate = new RestTemplate();
-
-                notifyStatus("UPLOADING", (attempt * 30) + 10);
-                ResponseEntity<Map> response = restTemplate.postForEntity(UPLOAD_URL, request, Map.class);
-
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    String url = (String) response.getBody().get("url");
-                    log.info("☁️ [{}] Uploaded (attempt {}): {}",
-                            task.getSim().getComName(), attempt + 1, url);
-
-                    notifyStatus("UPLOAD_SUCCESS", 100);
-                    // Delete local file only after successful upload
-                    Files.deleteIfExists(file.toPath());
-                    return url;
-                }
-            } catch (Exception e) {
-                log.warn("⚠️ [{}] Upload failed (attempt {}/{}): {}",
-                        task.getSim().getComName(), attempt + 1, maxRetries, e.getMessage());
-
-                if (attempt < maxRetries - 1) {
-                    try {
-                        Thread.sleep(delayMs[attempt]);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-            }
-        }
-
-        // ✅ Keep file for manual recovery if upload fails
-        log.error("❌ [{}] Upload failed after {} retries, keeping file: {}",
-                task.getSim().getComName(), maxRetries, file.getAbsolutePath());
-        return null;
+        log.info("💾 [{}] Giữ recording tại máy: {}", task.getSim().getComName(), file.getAbsolutePath());
+        return file.getAbsolutePath();
     }
 
     private void notifyStatus(String status) {
@@ -644,26 +586,8 @@ public class CallInSession implements TaskSession {
 
     private void notifyStatus(String status, Integer progress, String message) {
         try {
-            Map<String, Object> event = new HashMap<>();
-            event.put("orderId", task.getOrderId());
-            event.put("service", task.getServiceCode());
-            event.put("status", status);
-            event.put("deviceName", task.getSim().getDeviceName());
-            event.put("phone", callerNumber);
-            event.put("fromNumber", callerNumber);
-            event.put("com", task.getSim().getComName());
-            event.put("timestamp", Instant.now().toEpochMilli());
-
-            if (progress != null) {
-                event.put("progress", progress);
-            }
-            if (message != null) {
-                event.put("message", message);
-            }
-
-            if (remoteWsClient != null && remoteWsClient.isConnected()) {
-                remoteWsClient.send("/topic/receive-call", event);
-            }
+            log.debug("[{}] CALL_IN local status={}, progress={}, message={}",
+                    task.getSim().getComName(), status, progress, message);
         } catch (Exception e) {
             log.debug("⚠️ Failed to notify status: {}", e.getMessage());
         }

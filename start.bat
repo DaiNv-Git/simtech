@@ -1,8 +1,8 @@
 @echo off
 chcp 65001 >nul 2>&1
-title SimSmart GSM Gateway
+title simTech GSM SMS Tool
 echo ============================================
-echo   SimSmart GSM Gateway - Starting...
+echo   simTech GSM SMS Tool - Starting...
 echo ============================================
 echo.
 
@@ -20,8 +20,8 @@ if not exist "%JAVA_HOME%\bin\java.exe" (
 )
 
 REM --- Check if JAR exists ---
-if not exist "%APP_DIR%simsmart-gsm.jar" (
-    echo [ERROR] simsmart-gsm.jar not found in: %APP_DIR%
+if not exist "%APP_DIR%simtech.jar" (
+    echo [ERROR] simtech.jar not found in: %APP_DIR%
     pause
     exit /b 1
 )
@@ -39,7 +39,7 @@ echo Starting application...
 echo.
 
 REM --- Run the application with JavaFX module-path ---
-"%JAVA_HOME%\bin\java.exe" --module-path "%APP_DIR%javafx-lib" --add-modules javafx.controls,javafx.web,javafx.graphics,javafx.base,javafx.media -jar "%APP_DIR%simsmart-gsm.jar" --spring.profiles.active=prod
+"%JAVA_HOME%\bin\java.exe" --module-path "%APP_DIR%javafx-lib" --add-modules javafx.controls,javafx.web,javafx.graphics,javafx.base,javafx.media -jar "%APP_DIR%simtech.jar"
 
 echo.
 echo ============================================

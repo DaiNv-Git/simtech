@@ -1,8 +1,6 @@
 package app.simsmartgsm.service;
 
-import app.simsmartgsm.baseGateway.CloudGateway;
 import app.simsmartgsm.config.ComManager;
-import app.simsmartgsm.config.RemoteSmsJobSubscriberConfig;
 import app.simsmartgsm.entity.Country;
 import app.simsmartgsm.entity.Sim;
 import app.simsmartgsm.repository.SimRepository;
@@ -10,6 +8,9 @@ import app.simsmartgsm.uitils.SimStatus;
 import app.simsmartgsm.uitils.OtpSessionType;
 import app.simsmartgsm.uitils.PortWorker;
 import app.simsmartgsm.uitils.SmsDecoder;
+import app.simsmartgsm.tool.model.SmsDocument;
+import app.simsmartgsm.tool.repository.ToolSmsRepository;
+import app.simsmartgsm.tool.service.TelegramService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +29,9 @@ import java.util.concurrent.*;
 public class GsmListenerService {
 
     private final ComManager comManager;
-    private final RemoteSmsJobSubscriberConfig remoteSmsJobSubscriberConfig;
     private final CallRecordService callRecordService;
-    private final CloudGateway cloudGateway;
+    private final TelegramService telegramService;
+    private final ToolSmsRepository mongoSmsRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final SimRepository simRepository;
     private final app.simsmartgsm.repository.SmsMessageJpaRepository smsRepository;
@@ -88,7 +89,7 @@ public class GsmListenerService {
     }
 
     // ==========================================================
-    // 📨 NHẬN SMS - LƯU LOCAL + BẮN WEBSOCKET + GỬI CLOUD
+    // 📨 NHẬN SMS - LƯU LOCAL + CẬP NHẬT UI + GỬI TELEGRAM
     // ==========================================================
     public void processSms(Sim sim, String sender, String body) {
         try {
@@ -150,33 +151,10 @@ public class GsmListenerService {
                     "📡 [{}] WebSocket notifications sent: /topic/sms/inbox, /topic/sms/new, /topic/sms/unread-count (unread={})",
                     sim.getComName(), unreadCount);
 
-            // ✅ Step 4: Gửi SMS lên cloud gateway (sử dụng decoded content)
-            // 🚀 OPTIMIZE: Chuyển sang ASYNC để không block SMS scan loop
-            CompletableFuture.runAsync(() -> {
-                try {
-                    cloudGateway.forwardSms(sim, decodedSender, decodedBody);
-                } catch (Exception e) {
-                    log.error("❌ [{}] Error sending SMS to cloud (async): {}", sim.getComName(), e.getMessage());
-                }
-            });
-
-            // ✅ Step 5: Gửi inbound SMS qua WebSocket config (cho remote system)
-            // 🚀 OPTIMIZE: Cũng chuyển sang ASYNC
-            CompletableFuture.runAsync(() -> {
-                try {
-                    if (remoteSmsJobSubscriberConfig != null) {
-                        remoteSmsJobSubscriberConfig.handleInboundSms(
-                                sim.getPhoneNumber(),
-                                decodedSender,
-                                decodedBody,
-                                sim.getComName());
-                    } else {
-                        log.warn("⚠️ RemoteSmsJobSubscriberConfig chưa sẵn sàng — bỏ qua gửi WS inbound");
-                    }
-                } catch (Exception ex) {
-                    log.error("❌ Lỗi khi gửi inbound lên WS (async): {}", ex.getMessage());
-                }
-            });
+            // Lưu vào collection Mongo "sms" rồi đẩy Telegram. Dashboard local vẫn
+            // dùng bản H2 ở trên để giữ nguyên tương thích.
+            saveMongoSms(sim, decodedSender, decodedBody, "INBOUND", "RECEIVED", null);
+            telegramService.sendIncomingSms(sim.getComName(), sim.getPhoneNumber(), decodedSender, decodedBody);
 
         } catch (Exception e) {
             log.error("❌ [{}] processSms error: {}", sim.getComName(), e.getMessage(), e);
@@ -268,8 +246,9 @@ public class GsmListenerService {
 
                 // ✅ Send SUCCESS callback to cloud
                 String msgId = getMsgId(localMsgId, orderId, state);
-                sendCloudCallback(sim, to, content, orderId, serviceCode, msgId, true,
+                recordSmsResult(sim, to, content, orderId, serviceCode, msgId, true,
                         state != null ? state.triedSims : null);
+                saveMongoSms(sim, to, content, "OUTBOUND", "SENT", orderId);
 
                 if (state != null && state.triedSims.size() > 1) {
                     log.info("✅ [SMS_RESULT] SUCCESS after switching SIMs! Tried: {} -> Final: {}",
@@ -298,38 +277,39 @@ public class GsmListenerService {
 
                 // Update local database
                 updateLocalSmsStatus(orderId, false, "SMS failed after all retries");
+                saveMongoSms(sim, to, content, "OUTBOUND", "FAILED", orderId);
 
-                // ✅ FIX: Gửi FAILED response về server qua /topic/sms-response
-                // Trước đây chỉ gửi sendFinalFail() vào /topic/sms-final-fail
-                // nhưng server CŨNG cần response trên /topic/sms-response để cập nhật trạng thái SMS
-                if (remoteSmsJobSubscriberConfig != null) {
-                    // Gửi response FAILED qua /topic/sms-response (channel chính mà server lắng nghe)
-                    String failMsgId = getMsgId(localMsgId, orderId, null);
-                    remoteSmsJobSubscriberConfig.sendSmsResponse(
-                            "unknown", // userId
-                            serviceCode, // campaignId
-                            sim.getPhoneNumber(), // simPhone
-                            to, // customerPhone
-                            sim.getComName(), // comPort
-                            orderId, // orderId
-                            content, // content
-                            "FAILED",
-                            "SMS failed after all retries",
-                            failMsgId);
-
-                    // Gửi thêm event /topic/sms-final-fail (cho monitoring/logging)
-                    remoteSmsJobSubscriberConfig.sendFinalFail(
-                            orderId,
-                            to,
-                            1, // total attempts
-                            java.util.Collections.singletonList(sim.getPhoneNumber()),
-                            sim.getPhoneNumber()
-                    );
-                }
             }
 
         } catch (Exception e) {
             log.error("❌ [SMS_RESULT] push failed: {}", e.getMessage(), e);
+        }
+    }
+
+    private void saveMongoSms(Sim sim, String phoneNumber, String content,
+            String direction, String status, String referenceId) {
+        try {
+            String fingerprint = referenceId == null || referenceId.isBlank()
+                    ? null
+                    : "outbound:" + referenceId;
+            SmsDocument document = fingerprint == null
+                    ? null
+                    : mongoSmsRepository.findByFingerprint(fingerprint).orElse(null);
+            if (document == null) {
+                document = SmsDocument.builder()
+                        .fingerprint(fingerprint)
+                        .createdAt(Instant.now())
+                        .build();
+            }
+            document.setComPort(sim != null ? sim.getComName() : null);
+            document.setSimPhone(sim != null ? sim.getPhoneNumber() : null);
+            document.setPhoneNumber(phoneNumber);
+            document.setDirection(direction);
+            document.setContent(content);
+            document.setStatus(status);
+            mongoSmsRepository.save(document);
+        } catch (Exception e) {
+            log.error("Không thể lưu SMS vào Mongo: {}", e.getMessage());
         }
     }
 
@@ -372,27 +352,10 @@ public class GsmListenerService {
         return UUID.randomUUID().toString();
     }
 
-    /**
-     * ✅ Send callback to cloud (only called on SUCCESS or FINAL FAIL)
-     */
-    private void sendCloudCallback(Sim sim, String to, String content, String orderId,
+    /** Ghi nhận kết quả gửi SMS tại máy; không callback tới web cũ. */
+    private void recordSmsResult(Sim sim, String to, String content, String orderId,
             String serviceCode, String msgId, boolean success, List<String> triedSims) {
-        if (remoteSmsJobSubscriberConfig == null)
-            return;
-
-        remoteSmsJobSubscriberConfig.sendSmsResponse(
-                "unknown", // userId
-                serviceCode, // campaignId
-                sim.getPhoneNumber(), // simPhone (the one that finally succeeded/failed)
-                to, // customerPhone
-                sim.getComName(), // comPort
-                orderId, // orderId - for order lookup
-                content, // content
-                success ? "SUCCESS" : "FAILED",
-                success ? "SMS sent successfully" : "SMS failed after all retries",
-                msgId);
-
-        log.info("📡 [SMS_RESULT] Sent {} callback: orderId={}, localMsgId={}, triedSims={}",
+        log.info("📋 [SMS_RESULT] Local result={}: orderId={}, localMsgId={}, triedSims={}",
                 success ? "SUCCESS" : "FINAL_FAIL", orderId, msgId,
                 triedSims != null ? triedSims : "N/A");
     }
@@ -559,19 +522,10 @@ public class GsmListenerService {
             // ✅ Send FAILED callback to cloud using unified method
             if (lastSim != null) {
                 String msgId = getMsgId(state.localMsgId, orderId, state);
-                sendCloudCallback(lastSim, state.toNumber, state.content, orderId,
+                recordSmsResult(lastSim, state.toNumber, state.content, orderId,
                         state.serviceCode, msgId, false, state.triedSims);
-            } else if (remoteSmsJobSubscriberConfig != null) {
-                // Fallback: use old method if can't find SIM
-                remoteSmsJobSubscriberConfig.sendFinalFail(
-                        orderId,
-                        state.toNumber,
-                        state.totalAttempts,
-                        state.triedSims,
-                        state.currentSimPhone);
-                log.info("📡 [RETRY] Sent final fail notification for order {}", orderId);
             } else {
-                log.warn("⚠️ [RETRY] Cannot send final fail - no SIM or remoteSmsJobSubscriberConfig");
+                log.warn("⚠️ [RETRY] Không tìm thấy SIM cuối để lưu kết quả cho order {}", orderId);
             }
         } catch (Exception e) {
             log.error("❌ [RETRY] Error sending final fail notification: {}", e.getMessage(), e);
@@ -624,9 +578,6 @@ public class GsmListenerService {
 
                 session.setCallHandled(true);
                 session.setCallStartTime(Instant.now());
-
-                // Bắn CALL_IN lên Cloud
-                cloudGateway.forwardCall(sim, fromNumber, null);
 
                 // Kết thúc sau 20s
                 scheduler.schedule(() -> {

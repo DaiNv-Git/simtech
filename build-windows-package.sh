@@ -10,13 +10,13 @@ set -e
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 VERSION="1.0.0"
-PACKAGE_NAME="simsmart-gsm-${VERSION}-windows-${TIMESTAMP}"
+PACKAGE_NAME="simtech-${VERSION}-windows-${TIMESTAMP}"
 BUILD_DIR="${PROJECT_DIR}/dist/build-${TIMESTAMP}"
 OUTPUT_DIR="${PROJECT_DIR}/dist"
 JDK_ZIP="${PROJECT_DIR}/openjdk-17-windows.zip"
 
 echo "============================================"
-echo "  SimSmart GSM - Windows Package Builder"
+echo "  simTech - Windows Package Builder"
 echo "============================================"
 echo ""
 echo "Project: ${PROJECT_DIR}"
@@ -42,8 +42,8 @@ find target/javafx-lib -name "*-mac.jar" -delete 2>/dev/null || true
 find target/javafx-lib -name "*-mac-aarch64.jar" -delete 2>/dev/null || true
 find target/javafx-lib -name "*-linux.jar" -delete 2>/dev/null || true
 
-JAR_FILE=$(ls target/simsmart-gsm-*.jar 2>/dev/null | grep -v original | head -1)
-EXE_FILE="target/SimSmartGSM.exe"
+JAR_FILE=$(ls target/simtech-*.jar 2>/dev/null | grep -v original | head -1)
+EXE_FILE="target/simTech.exe"
 JAVAFX_LIB="target/javafx-lib"
 
 if [ -z "$JAR_FILE" ]; then
@@ -74,12 +74,12 @@ echo "[4/5] Assembling package..."
 
 # Copy EXE
 if [ -f "$EXE_FILE" ]; then
-    cp "${EXE_FILE}" "${DIST_ROOT}/SimSmartGSM.exe"
-    echo "  -> Copied SimSmartGSM.exe"
+    cp "${EXE_FILE}" "${DIST_ROOT}/simTech.exe"
+    echo "  -> Copied simTech.exe"
 fi
 
 # Copy JAR
-cp "${JAR_FILE}" "${DIST_ROOT}/simsmart-gsm.jar"
+cp "${JAR_FILE}" "${DIST_ROOT}/simtech.jar"
 echo "  -> Copied JAR"
 
 # Copy JavaFX libs
@@ -145,7 +145,7 @@ echo ""
 echo "  To deploy on Windows:"
 echo "  1. Copy the ZIP to the Windows machine"
 echo "  2. Extract the ZIP"
-echo "  3. Double-click 'SimSmartGSM.exe' to run"
+echo "  3. Double-click 'simTech.exe' to run"
 echo "     (or 'start.bat' as backup)"
 echo "  4. Optionally run 'Tao_Icon_Desktop.bat' to create a Home Screen shortcut."
 echo ""
