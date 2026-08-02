@@ -160,10 +160,16 @@ async function scanSims() {
   const buttons = [$("#scan-sims"), $("#hero-scan")].filter(Boolean);
   buttons.forEach(button => { button.disabled = true; button.textContent = "Đang quét…"; });
   try {
+    // Xóa snapshot cũ; WebSocket sẽ bổ sung từng SIM mới ngay khi scan thấy.
+    state.sims = [];
+    renderDevices(); renderOverviewSims(); fillPortSelects();
     await api(API + "/sim/scan");
     await loadSims();
     toast("Quét SIM hoàn tất", "success");
-  } catch (error) { toast(error.message, "error"); }
+  } catch (error) {
+    await loadSims();
+    toast(error.message, "error");
+  }
   finally {
     if ($("#scan-sims")) { $("#scan-sims").disabled = false; $("#scan-sims").textContent = "↻ Quét SIM"; }
     if ($("#hero-scan")) { $("#hero-scan").disabled = false; $("#hero-scan").textContent = "Quét toàn bộ cổng →"; }
@@ -400,7 +406,22 @@ function connectWebSocket() {
     const client = Stomp.over(new SockJS("/ws")); client.debug = null;
     client.connect({}, () => {
       setConnection(true);
-      client.subscribe("/topic/sims", message => { try { state.sims = JSON.parse(message.body).map(normalizeSim); renderDevices(); renderOverviewSims(); fillPortSelects(); } catch (_) {} });
+      client.subscribe("/topic/sims", message => {
+        try {
+          const hiddenStatuses = new Set(["REPLACED", "COM_ERROR", "NO_SIM", "SIM_ERROR", "OFFLINE"]);
+          const updates = JSON.parse(message.body)
+            .map(normalizeSim)
+            .filter(sim => sim.iccid && !hiddenStatuses.has(String(sim.status || "").toUpperCase()));
+          updates.forEach(update => {
+            const index = state.sims.findIndex(sim => sim.comPort === update.comPort);
+            if (index >= 0) state.sims[index] = update;
+            else state.sims.push(update);
+          });
+          state.sims = state.sims.filter(sim =>
+            sim.iccid && !hiddenStatuses.has(String(sim.status || "").toUpperCase()));
+          renderDevices(); renderOverviewSims(); fillPortSelects();
+        } catch (_) {}
+      });
       client.subscribe("/topic/sms/new", () => { loadMessages(); loadStats(); toast("Có SMS mới — đã chuyển tiếp tới các kênh", "success"); });
       client.subscribe("/topic/sms/status", () => loadMessages());
       client.subscribe("/topic/call/status", () => loadCalls());

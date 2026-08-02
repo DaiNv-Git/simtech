@@ -674,6 +674,38 @@ public class AtCommandHelper implements Closeable {
         return null;
     }
 
+    /**
+     * Fast CNUM probe used by bulk SIM scans.
+     *
+     * Bulk scanning must not spend up to ten seconds retrying a command that many
+     * SIMs legitimately do not support. The regular {@link #getCnum()} keeps its
+     * conservative retry behaviour for interactive/recovery flows.
+     */
+    public String getCnumFast() throws IOException, InterruptedException {
+        String response = sendAndRead("AT+CNUM", 1500);
+        if (response == null || response.isBlank() || "OK".equals(response.trim())) {
+            return null;
+        }
+
+        Matcher matcher = Pattern.compile("\\+?CNUM:.*?\"[^\"]*\",\"(\\+?\\d{6,20})\"").matcher(response);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        matcher = Pattern.compile("\\+?CNUM:\\s*,\"(\\+?\\d{6,20})\"").matcher(response);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        matcher = Pattern.compile("\\+?CNUM:.*?\"(\\+?\\d{6,20})\"").matcher(response);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        matcher = Pattern.compile("\\+?CNUM:.*?(\\+?\\d{6,20})").matcher(response);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
     public String queryOperator() throws IOException, InterruptedException {
         // ⏰ Tăng timeout cho SIM Nhật (Softbank, Docomo, AU)
         String resp = sendAndRead("AT+COPS?", 3000);

@@ -23,6 +23,9 @@ gsm:
   auto-record: true
   recording-path: ${RECORDING_PATH:C:/recording}
   auto-scan-on-startup: true
+  scan:
+    # Số modem quét đồng thời. Giảm xuống 3-4 nếu USB hub không đủ nguồn.
+    parallelism: ${GSM_SCAN_PARALLELISM:6}
   test-mode: false
   test-call-mode: false
   sms:

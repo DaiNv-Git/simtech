@@ -2,6 +2,8 @@ package app.simsmartgsm.tool.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -37,12 +39,26 @@ public class TelegramService {
     }
 
     @Async
-    public void sendIncomingSms(String comPort, String simPhone, String sender, String body) {
-        sendMessage("📩 SMS mới\n"
-                + "SIM: " + value(simPhone, "Chưa xác định") + "\n"
-                + "Cổng: " + value(comPort, "Chưa xác định") + "\n"
-                + "Từ: " + value(sender, "Không rõ") + "\n\n"
-                + value(body, ""));
+    @EventListener(ApplicationReadyEvent.class)
+    public void notifyApplicationReady() {
+        if (!isConfigured()) {
+            log.info("Telegram chưa được cấu hình, bỏ qua thông báo khởi động");
+            return;
+        }
+        sendMessage("✅ simTech đã kết nối Telegram thành công.");
+    }
+
+    @Async
+    public void sendIncomingSms(String deviceName, String comPort, String simPhone, String sender, String body) {
+        sendMessage(formatIncomingSms(deviceName, comPort, simPhone, sender, body));
+    }
+
+    static String formatIncomingSms(String deviceName, String comPort, String simPhone, String sender, String body) {
+        return value(deviceName, "UNKNOWN-DEVICE") + "\n"
+                + "COM: " + value(comPort, "UNKNOWN") + "\n"
+                + "FROM: " + value(sender, "UNKNOWN") + "\n"
+                + "TO: " + value(simPhone, "UNKNOWN") + "\n"
+                + "MSG: " + value(body, "");
     }
 
     public void sendMessage(String message) {

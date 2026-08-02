@@ -38,8 +38,6 @@ public class SimSyncService {
     private final app.simsmartgsm.config.ComManager comManager;
     private final CcidMatcher ccidMatcher;
 
-    // ✅ OPTIMIZED: Sử dụng 2 thread để quét tuần tự tránh gây nghẽn và sụt áp USB Hub, đảm bảo quét chính xác 100% các SIM
-    private static final int THREAD_POOL_SIZE = 2;
     private static final long SCAN_TIMEOUT_MIN = 5; // 5 phút đủ để scan 96 ports
     private static final int MISS_THRESHOLD = 2; // ✅ Giảm từ 10→2: chuyển sang REPLACED nhanh hơn khi thay SIM
     private static final int INACTIVE_THRESHOLD = 1; // ✅ Giảm từ 5→1: chuyển sang INACTIVE ngay lập tức khi mất SIM
@@ -64,6 +62,10 @@ public class SimSyncService {
 
     @Value("${gsm.auto-scan-on-startup:true}")
     private boolean autoScanOnStartup;
+
+    /** Số modem được scan đồng thời; có thể hạ xuống nếu USB hub nguồn yếu. */
+    @Value("${gsm.scan.parallelism:6}")
+    private int scanParallelism;
 
     private static volatile boolean scanInProgress = false;
 
@@ -348,9 +350,48 @@ public class SimSyncService {
         // Đảm bảo frontend dropdown luôn đồng bộ với DB (số điện thoại đúng)
         pushFinalSimListToWebSocket(sims);
 
-        startWorkersForActiveSims(sims);
+        startWorkersForScannedSims(sims);
 
         return sims;
+    }
+
+    /**
+     * Manual hardware rescan used by the UI scan button.
+     * Workers own their serial ports, so they must be stopped; otherwise
+     * scanAllPorts() can only return the old worker snapshot and cannot detect a
+     * physically replaced SIM.
+     */
+    public List<Sim> rescanAllSims() throws Exception {
+        if (scanInProgress) {
+            throw new IllegalStateException("Một lượt scan SIM khác đang chạy");
+        }
+
+        List<Sim> previousWorkerSims = comManager.getWorkers().values().stream()
+                .map(PortWorker::getSim)
+                .filter(Objects::nonNull)
+                .toList();
+
+        scanInProgress = true;
+        try {
+            stopAllWorkersForScan();
+            return scanSimsOnly();
+        } catch (Exception e) {
+            // Nếu scan lỗi giữa chừng, phục hồi listener cũ để không làm gián đoạn
+            // nhận SMS trên toàn bộ thiết bị.
+            previousWorkerSims.forEach(sim -> {
+                try {
+                    if (!comManager.isWorkerRunning(sim.getComName())) {
+                        comManager.startWorker(sim);
+                    }
+                } catch (Exception restoreError) {
+                    log.warn("⚠️ Không thể phục hồi listener {}: {}",
+                            sim.getComName(), restoreError.getMessage());
+                }
+            });
+            throw e;
+        } finally {
+            scanInProgress = false;
+        }
     }
 
     /**
@@ -359,30 +400,18 @@ public class SimSyncService {
      * @removed SMS detection logic - chỉ dùng AT commands để detect số
      */
     public void syncAndResolve() throws Exception {
-        String deviceName = getDeviceName();
-        log.info("=== 🔍 BẮT ĐẦU SCAN SIM cho deviceName={} ===", deviceName);
-
-        // ✅ FIX: KHÔNG stop toàn bộ PortWorkers để tránh gián đoạn gửi/nhận SMS
-        // stopAllWorkersForScan();
-
-        ScanBundle bundle = scanAllPorts();
-        logScanResult(deviceName, bundle.scanned);
-
-        List<Sim> sims = syncScannedToDb(deviceName, bundle.scanned, bundle.busyPorts);
-
-        log.info("=== ✅ SCAN HOÀN TẤT: {} SIMs scanned ===", sims.size());
-
-        pushFinalSimListToWebSocket(sims);
-        startWorkersForActiveSims(sims);
+        rescanAllSims();
     }
 
     /**
-     * Khởi động PortWorker cho các SIM ACTIVE để tiếp tục nhận SMS URC/polling sau
-     * mọi luồng scan, kể cả luồng có stop worker trước khi scan.
+     * Khởi động PortWorker cho mọi SIM vừa scan thấy để tiếp tục nhận SMS
+     * URC/polling, kể cả SIM chưa xác định được số điện thoại.
      */
-    private void startWorkersForActiveSims(List<Sim> sims) {
+    private void startWorkersForScannedSims(List<Sim> sims) {
         for (Sim sim : sims) {
-            if (!"ACTIVE".equals(sim.getStatus())) {
+            // SIM vừa scan thấy nhưng chưa có số vẫn phải có listener để nhận SMS.
+            if (String.valueOf(SimStatus.REPLACED).equals(sim.getStatus())
+                    || isBlank(sim.getCcid())) {
                 continue;
             }
 
@@ -480,13 +509,15 @@ public class SimSyncService {
 
     private ScanBundle scanAllPorts() throws InterruptedException {
         SerialPort[] ports = SerialPort.getCommPorts();
-        log.debug("🔍 Phát hiện {} cổng COM, sử dụng {} threads", ports.length, THREAD_POOL_SIZE);
+        int poolSize = Math.max(1, Math.min(scanParallelism, Math.max(1, ports.length)));
+        log.info("🔍 Phát hiện {} cổng COM, scan song song {} cổng", ports.length, poolSize);
 
-        // ✅ PURE AT MODE: Không load SIM from database
-        // Tất cả dữ liệu được lấy 100% từ AT commands
-        log.debug("📋 PURE AT SCAN MODE: Scanning all ports without database lookup");
+        log.debug("📋 FAST SCAN MODE: AT commands with one preloaded DB lookup");
 
-        ExecutorService pool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+        // Load một lần thay vì query MongoDB lặp lại trên từng cổng.
+        ScanLookup scanLookup = buildScanLookup();
+
+        ExecutorService pool = Executors.newFixedThreadPool(poolSize);
         List<Future<ScannedSim>> futures = new ArrayList<>();
         Set<String> busyPorts = ConcurrentHashMap.newKeySet();
 
@@ -537,7 +568,7 @@ public class SimSyncService {
 
             // 🚀 Submit task
             futures.add(pool.submit(() -> {
-                ScannedSim result = scanOnePort(com);
+                ScannedSim result = scanOnePort(com, scanLookup);
 
                 if (result == null) {
                     result = new ScannedSim(com, "COM_ERROR", "", "", "Unknown", false, 0);
@@ -598,16 +629,12 @@ public class SimSyncService {
                         String phoneSource = null;
 
                         // Check if SIM exists in DB (fuzzy match 18 ký tự)
-                        Optional<Sim> existingSimOpt = Optional.empty();
-                        try {
-                            existingSimOpt = findSimByCcidFuzzy(ccid);
-                        } catch (Exception e) {
-                            log.debug("⚠️ [RETRY-{}] Lỗi query DB: {}", retryPort, e.getMessage());
-                        }
+                        Optional<Sim> existingSimOpt = findKnownSim(ccid, scanLookup);
 
                         // Try to get phone from AT command first
                         try {
-                            String phoneFromAT = getPhoneNumberFast(helper);
+                            String phoneFromAT = getPhoneNumberFast(helper,
+                                    existingSimOpt.isEmpty() || isBlank(existingSimOpt.get().getPhoneNumber()));
                             if (notBlank(phoneFromAT)) {
                                 phone = normalizeNumber(phoneFromAT);
                                 phoneSource = "AT_COMMAND";
@@ -634,17 +661,8 @@ public class SimSyncService {
                             log.debug("📱 [RETRY-{}] AT command failed, dùng số từ DB: {} (CCID: {})", retryPort, phone,
                                     ccid);
 
-                            // ✅ GHI SỐ VÀO THÂN SIM để lần sau AT command đọc được
-                            try {
-                                boolean writeSuccess = writeNumberToSimPhonebook(helper, phone);
-                                if (writeSuccess) {
-                                    log.debug("✅ [RETRY-{}] Đã ghi số {} vào thân SIM (phonebook)", retryPort, phone);
-                                } else {
-                                    log.warn("⚠️ [RETRY-{}] Không ghi được số vào thân SIM", retryPort);
-                                }
-                            } catch (Exception e) {
-                                log.warn("⚠️ [RETRY-{}] Lỗi khi ghi số vào SIM: {}", retryPort, e.getMessage());
-                            }
+                            // Không ghi phonebook trong bulk scan: thao tác này gồm nhiều AT
+                            // command chậm. Background USSD job chịu trách nhiệm cập nhật SIM.
                         }
 
                         int signalLevel = getSignalLevel(helper);
@@ -840,7 +858,7 @@ public class SimSyncService {
         }
     }
 
-    private ScannedSim scanOnePort(String com) {
+    private ScannedSim scanOnePort(String com, ScanLookup scanLookup) {
         // 🚀 FAST SCAN MODE with PURE AT commands
         return portManager.withPortFastScan(com, helper -> {
             try {
@@ -859,16 +877,12 @@ public class SimSyncService {
                 String phoneSource = null; // Track where phone number came from
 
                 // Check if SIM exists in DB (fuzzy match 18 ký tự)
-                Optional<Sim> existingSimOpt = Optional.empty();
-                try {
-                    existingSimOpt = findSimByCcidFuzzy(ccid);
-                } catch (Exception e) {
-                    log.debug("⚠️ [{}] Lỗi query DB: {}", com, e.getMessage());
-                }
+                Optional<Sim> existingSimOpt = findKnownSim(ccid, scanLookup);
 
                 // Try to get phone from AT command first
                 try {
-                    String phoneFromAT = getPhoneNumberFast(helper);
+                    String phoneFromAT = getPhoneNumberFast(helper,
+                            existingSimOpt.isEmpty() || isBlank(existingSimOpt.get().getPhoneNumber()));
                     if (notBlank(phoneFromAT)) {
                         phone = normalizeNumber(phoneFromAT);
                         phoneSource = "AT_COMMAND";
@@ -894,21 +908,8 @@ public class SimSyncService {
                     phoneSource = "DATABASE_FALLBACK";
                     log.debug("📱 [{}] AT command failed, dùng số từ DB: {} (CCID: {})", com, phone, ccid);
 
-                    // ✅ GHI SỐ VÀO THÂN SIM để lần sau AT command đọc được (nếu enabled)
-                    if (ENABLE_WRITE_TO_SIM_PHONEBOOK) {
-                        try {
-                            boolean writeSuccess = writeNumberToSimPhonebook(helper, phone);
-                            if (writeSuccess) {
-                                log.debug("✅ [{}] Đã ghi số {} vào thân SIM (phonebook)", com, phone);
-                            } else {
-                                log.warn("⚠️ [{}] Không ghi được số vào thân SIM", com);
-                            }
-                        } catch (Exception e) {
-                            log.warn("⚠️ [{}] Lỗi khi ghi số vào SIM: {}", com, e.getMessage());
-                        }
-                    } else {
-                        log.debug("⏭️ [{}] Skip ghi số vào SIM (ENABLE_WRITE_TO_SIM_PHONEBOOK=false)", com);
-                    }
+                    // Không ghi phonebook trong bulk scan: thao tác này gồm nhiều AT
+                    // command chậm. Background USSD job chịu trách nhiệm cập nhật SIM.
                 }
 
                 // 4️⃣ Đọc mức tín hiệu sóng
@@ -933,11 +934,17 @@ public class SimSyncService {
     /**
      * 🚀 Fast version - chỉ thử CNUM, không thử USSD (tốn thời gian)
      */
-    private String getPhoneNumberFast(AtCommandHelper helper) throws Exception {
-        // Chỉ thử CNUM - nhanh nhất
-        String phone = helper.getCnum();
+    private String getPhoneNumberFast(AtCommandHelper helper, boolean includePhonebook) throws Exception {
+        // Bulk scan chỉ probe CNUM một lần; getCnum() đầy đủ vẫn dành cho recovery.
+        String phone = helper.getCnumFast();
         if (notBlank(phone)) {
             return normalizeNumber(phone);
+        }
+
+        // Nếu DB đã có số theo CCID thì caller sẽ dùng ngay, không cần tốn thêm
+        // tối đa 4.5 giây đọc phonebook trên mỗi lần scan.
+        if (!includePhonebook) {
+            return null;
         }
 
         // ✅ FIX: Chỉ đọc từ "SM" (SIM card memory), KHÔNG đọc "ON"/"ME" (modem memory)
@@ -949,6 +956,31 @@ public class SimSyncService {
 
         // Không thử USSD trong fast scan vì quá chậm (15s mỗi code)
         return null;
+    }
+
+    private ScanLookup buildScanLookup() {
+        try {
+            List<Sim> sims = simRepository.findAll();
+            Map<String, Sim> exactByCcid = sims.stream()
+                    .filter(sim -> notBlank(sim.getCcid()))
+                    .collect(Collectors.toMap(Sim::getCcid, sim -> sim, (left, right) -> left));
+            List<Sim> candidatesWithPhone = sims.stream()
+                    .filter(sim -> notBlank(sim.getPhoneNumber()))
+                    .toList();
+            return new ScanLookup(exactByCcid, candidatesWithPhone);
+        } catch (Exception e) {
+            log.warn("⚠️ Không preload được SIM từ DB, tiếp tục scan AT: {}", e.getMessage());
+            return new ScanLookup(Map.of(), List.of());
+        }
+    }
+
+    private Optional<Sim> findKnownSim(String ccid, ScanLookup lookup) {
+        Sim exact = lookup.exactByCcid.get(ccid);
+        if (exact != null && notBlank(exact.getPhoneNumber())) {
+            return Optional.of(exact);
+        }
+        Optional<CcidMatcher.Match> fuzzy = ccidMatcher.findBest(ccid, lookup.candidatesWithPhone);
+        return fuzzy.map(CcidMatcher.Match::sim).or(() -> Optional.ofNullable(exact));
     }
 
     private String getPhoneNumber(AtCommandHelper helper) throws Exception {
@@ -1602,5 +1634,10 @@ public class SimSyncService {
             String simProvider,
             boolean ok,
             int signalLevel) {
+    }
+
+    private static record ScanLookup(
+            Map<String, Sim> exactByCcid,
+            List<Sim> candidatesWithPhone) {
     }
 }

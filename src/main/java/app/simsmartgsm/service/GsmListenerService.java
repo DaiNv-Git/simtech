@@ -151,7 +151,8 @@ public class GsmListenerService {
                     "📡 [{}] WebSocket notifications sent: /topic/sms/inbox, /topic/sms/new, /topic/sms/unread-count (unread={})",
                     sim.getComName(), unreadCount);
 
-            telegramService.sendIncomingSms(sim.getComName(), sim.getPhoneNumber(), decodedSender, decodedBody);
+            telegramService.sendIncomingSms(
+                    sim.getDeviceName(), sim.getComName(), sim.getPhoneNumber(), decodedSender, decodedBody);
             webhookService.sendIncomingSms(sim.getComName(), sim.getPhoneNumber(), decodedSender, decodedBody);
 
         } catch (Exception e) {

@@ -143,7 +143,9 @@ public class GsmService {
 
         try {
             // ✅ OPTIMIZED: Chỉ scan, không detect số (không block)
-            List<Sim> scannedSims = simSyncService.scanSimsOnly();
+            // Manual scan từ UI phải quét lại phần cứng để phát hiện SIM vừa thay,
+            // không dùng snapshot của PortWorker cũ.
+            List<Sim> scannedSims = simSyncService.rescanAllSims();
 
             List<SimResponse> results = new ArrayList<>();
 
@@ -168,7 +170,7 @@ public class GsmService {
 
         } catch (Exception e) {
             log.error("❌ Scan failed: {}", e.getMessage(), e);
-            return new ArrayList<>();
+            throw new IllegalStateException("Không thể quét lại SIM: " + e.getMessage(), e);
         }
     }
 
