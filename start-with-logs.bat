@@ -42,6 +42,7 @@ if not exist "%APP_JAR%" (
 
 cd /d "%APP_DIR%"
 "%JAVA_HOME%\bin\java.exe" ^
+  -Dspring.profiles.active=prod ^
   --module-path "%JAVAFX_LIB%" ^
   --add-modules javafx.controls,javafx.web,javafx.graphics,javafx.base,javafx.media ^
   -jar "%APP_JAR%" >> "%LOG_FILE%" 2>&1

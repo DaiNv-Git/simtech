@@ -39,7 +39,8 @@ echo Starting application...
 echo.
 
 REM --- Run the application with JavaFX module-path ---
-"%JAVA_HOME%\bin\java.exe" --module-path "%APP_DIR%javafx-lib" --add-modules javafx.controls,javafx.web,javafx.graphics,javafx.base,javafx.media -jar "%APP_DIR%simtech.jar"
+cd /d "%APP_DIR%"
+"%JAVA_HOME%\bin\java.exe" -Dspring.profiles.active=prod --module-path "%APP_DIR%javafx-lib" --add-modules javafx.controls,javafx.web,javafx.graphics,javafx.base,javafx.media -jar "%APP_DIR%simtech.jar"
 
 echo.
 echo ============================================

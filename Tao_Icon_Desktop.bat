@@ -1,23 +1,23 @@
 @echo off
 chcp 65001 >nul 2>&1
-title Create SimSmart GSM Shortcut
+title Create simTech Shortcut
 
 set "SCRIPT_DIR=%~dp0"
-set "EXE_PATH=%SCRIPT_DIR%SimSmartGSM.exe"
+set "EXE_PATH=%SCRIPT_DIR%simTech.exe"
 set "VBS_SCRIPT=%TEMP%\CreateShortcut_%RANDOM%.vbs"
 
 echo ============================================
 echo   Tạo Shortcut ngoài màn hình Desktop cho
-echo   SimSmart GSM...
+echo   simTech...
 echo ============================================
 
 REM Tạo script VBS để tự động tạo Shortcut
 echo Set oWS = WScript.CreateObject("WScript.Shell") > "%VBS_SCRIPT%"
-echo sLinkFile = oWS.SpecialFolders("Desktop") ^& "\SimSmart GSM.lnk" >> "%VBS_SCRIPT%"
+echo sLinkFile = oWS.SpecialFolders("Desktop") ^& "\simTech.lnk" >> "%VBS_SCRIPT%"
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> "%VBS_SCRIPT%"
 echo oLink.TargetPath = "%EXE_PATH%" >> "%VBS_SCRIPT%"
 echo oLink.WorkingDirectory = "%SCRIPT_DIR%" >> "%VBS_SCRIPT%"
-echo oLink.Description = "Phần mềm SimSmart GSM" >> "%VBS_SCRIPT%"
+echo oLink.Description = "Phần mềm simTech" >> "%VBS_SCRIPT%"
 echo oLink.Save >> "%VBS_SCRIPT%"
 
 REM Chạy đoạn script VBS

@@ -14,6 +14,7 @@ PACKAGE_NAME="simtech-${VERSION}-windows-${TIMESTAMP}"
 BUILD_DIR="${PROJECT_DIR}/dist/build-${TIMESTAMP}"
 OUTPUT_DIR="${PROJECT_DIR}/dist"
 JDK_ZIP="${PROJECT_DIR}/openjdk-17-windows.zip"
+ENV_FILE="${PROJECT_DIR}/.env"
 
 echo "============================================"
 echo "  simTech - Windows Package Builder"
@@ -31,6 +32,24 @@ if [ ! -f "${JDK_ZIP}" ]; then
     exit 1
 fi
 echo "  -> Found JDK ZIP: openjdk-17-windows.zip"
+
+if [ ! -f "${ENV_FILE}" ]; then
+    echo "[ERROR] Production configuration not found at: ${ENV_FILE}"
+    exit 1
+fi
+
+set -a
+# shellcheck disable=SC1090
+source "${ENV_FILE}"
+set +a
+
+for required_var in MONGODB_URI TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
+    if [ -z "${!required_var:-}" ]; then
+        echo "[ERROR] Missing ${required_var} in .env"
+        exit 1
+    fi
+done
+echo "  -> Production MongoDB and Telegram configuration loaded"
 
 # --- Step 2: Build JAR + EXE + JavaFX libs ---
 echo "[2/5] Building application JAR + EXE + JavaFX libs..."
@@ -113,6 +132,20 @@ echo "  -> Copied start scripts (including logging), shortcut script and instruc
 mkdir -p "${DIST_ROOT}/logs"
 mkdir -p "${DIST_ROOT}/data"
 echo "  -> Created logs/ and data/ directories"
+
+# Embed production settings in the deployable package. This generated file is
+# inside dist/ (gitignored), never in source control.
+PROD_PROPERTIES="${DIST_ROOT}/application-prod.properties"
+{
+    printf 'spring.data.mongodb.uri=%s\n' "${MONGODB_URI}"
+    printf 'telegram.enabled=%s\n' "${TELEGRAM_ENABLED:-true}"
+    printf 'telegram.bot-token=%s\n' "${TELEGRAM_BOT_TOKEN}"
+    printf 'telegram.chat-id=%s\n' "${TELEGRAM_CHAT_ID}"
+    printf 'gsm.scan.parallelism=%s\n' "${GSM_SCAN_PARALLELISM:-6}"
+    printf 'server.address=127.0.0.1\n'
+} > "${PROD_PROPERTIES}"
+chmod 600 "${PROD_PROPERTIES}"
+echo "  -> Generated application-prod.properties with embedded production settings"
 
 # Copy application config if exists
 if [ -d "${PROJECT_DIR}/src/main/resources" ]; then
