@@ -8,6 +8,20 @@
 - `sms`: lịch sử tin nhận/gửi, trạng thái và phản hồi modem.
 - `settings`: cấu hình webhook khách hàng, bearer token và signing secret.
 
+## Import SIM
+
+Tab **Import SIM** nhận file `.xlsx`, `.xls` hoặc nội dung text/CSV/TSV với ba
+cột `STT`, `SĐT`, `CCID`. Nên đặt cột CCID trong Excel ở định dạng **Text** vì
+Excel có thể làm tròn định danh dài nếu lưu dưới dạng số.
+
+Ứng dụng giữ cả CCID gốc và bản chỉ gồm chữ số. Khi modem không đọc được số điện
+thoại, CCID quét từ máy được so với database theo thứ tự: exact, khác phần đệm,
+dài/ngắn hơn, rồi sai khác tối đa hai chữ số. Trường hợp có nhiều kết quả ngang
+điểm sẽ không tự ghép để tránh gán nhầm số.
+
+- `POST /api/tool/sims/import/excel`: upload multipart với field `file`.
+- `POST /api/tool/sims/import/text`: JSON `{ "text": "STT,SĐT,CCID..." }`.
+
 ## Cấu hình
 
 Thiết lập các biến môi trường trước khi chạy:

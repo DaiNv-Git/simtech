@@ -46,6 +46,21 @@ public class Sim {
     /** ICCID/CCID của SIM */
     private String ccid;
 
+    /** ICCID gốc từ file import, giữ lại để đối chiếu khi modem trả chuỗi khác. */
+    private String importedCcid;
+
+    /** ICCID import đã chuẩn hóa chỉ còn chữ số. */
+    private String importedCcidNormalized;
+
+    /** Số thứ tự trong file import gần nhất. */
+    private Integer importSequence;
+
+    /** Nguồn tạo/cập nhật record: SCAN hoặc IMPORT. */
+    private String dataSource;
+
+    /** Điểm đối chiếu CCID gần nhất, 100 là khớp tuyệt đối. */
+    private Integer ccidMatchScore;
+
     private String imsi;
 
     private String agentId;

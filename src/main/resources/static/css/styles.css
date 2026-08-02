@@ -136,6 +136,38 @@ select:focus, input:focus, textarea:focus { border-color: var(--green); box-shad
 .device-meta small, .device-meta b { display: block; overflow: hidden; text-overflow: ellipsis; }
 .device-meta small { color: var(--muted); font-size: 10px; }
 .device-meta b { font-size: 11px; }
+.import-intro { margin-bottom: 26px; display: grid; grid-template-columns: 1.1fr 1fr; align-items: end; gap: 40px; }
+.import-intro h2 { margin: 8px 0 0; font: 800 34px/1.12 "Manrope"; letter-spacing: -1px; }
+.import-intro p { margin: 0; color: var(--muted); }
+.import-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.import-card { min-height: 500px; }
+.file-type { color: var(--green-dark); background: var(--mint); border-radius: 20px; padding: 5px 10px; font-size: 10px; font-weight: 800; }
+.import-body { padding: 22px; display: grid; gap: 16px; }
+.drop-zone { min-height: 190px; border: 1.5px dashed #b8c7bd; border-radius: 14px; background: #f8fbf8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; text-align: center; transition: .2s; }
+.drop-zone:hover, .drop-zone.dragging { border-color: var(--green); background: #f0fbf6; }
+.drop-zone input { position: absolute; opacity: 0; pointer-events: none; }
+.drop-zone b { font-size: 13px; }
+.drop-zone small { color: var(--muted); }
+.drop-icon { width: 44px; height: 44px; border-radius: 13px; color: var(--green-dark); background: var(--mint); display: grid; place-items: center; font-size: 20px; font-weight: 800; }
+.column-guide { border: 1px solid var(--line); border-radius: 11px; padding: 12px; display: flex; align-items: center; gap: 11px; }
+.column-guide > span { width: 30px; height: 30px; border-radius: 8px; color: white; background: var(--nav); display: grid; place-items: center; font-size: 10px; font-weight: 800; }
+.column-guide b, .column-guide small { display: block; }
+.column-guide small { color: var(--muted); }
+.import-warning { padding: 12px 14px; border-radius: 11px; color: #78500d; background: var(--amber-soft); display: grid; gap: 3px; font-size: 11px; }
+.import-textarea { min-height: 280px; font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.format-note { margin: -6px 0 0; color: var(--muted); font-size: 11px; }
+.import-result-card, .match-explain-card { min-height: 250px; }
+.import-empty { padding: 55px 20px; color: var(--muted); text-align: center; }
+.result-metrics { padding: 22px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; }
+.result-metrics div { padding: 12px 8px; border-radius: 10px; background: #f6f8f5; text-align: center; }
+.result-metrics strong, .result-metrics small { display: block; }
+.result-metrics strong { font: 800 22px "Manrope"; }
+.result-metrics small { color: var(--muted); font-size: 9px; text-transform: uppercase; }
+.import-warnings { max-height: 145px; margin: 0 22px 20px; padding: 12px 12px 12px 28px; overflow: auto; border-radius: 10px; color: #78500d; background: var(--amber-soft); font-size: 10px; }
+.match-steps { margin: 0; padding: 20px 24px 22px 48px; display: grid; gap: 17px; }
+.match-steps li::marker { color: var(--green); font-weight: 800; }
+.match-steps b, .match-steps span { display: block; }
+.match-steps span { color: var(--muted); font-size: 11px; }
 .split-layout { display: grid; grid-template-columns: minmax(290px, .75fr) minmax(500px, 1.6fr); gap: 16px; align-items: start; }
 .compose-card { position: sticky; top: 124px; }
 .form-stack { padding: 22px; display: grid; gap: 16px; }
@@ -207,7 +239,7 @@ textarea { resize: vertical; }
   .clock, .top-actions .secondary { display: none; }
   .page { padding: 20px 16px 36px; }
   .hero-strip { min-height: 290px; padding: 28px; align-items: flex-start; flex-direction: column; }
-  .split-layout, .settings-intro { grid-template-columns: 1fr; }
+  .split-layout, .settings-intro, .import-intro, .import-grid { grid-template-columns: 1fr; }
   .compose-card { position: static; }
 }
 @media (max-width: 560px) {

@@ -4,6 +4,7 @@ const state = { sims: [], smsTab: "INBOX", page: "overview" };
 const titles = {
   overview: ["CONTROL CENTER", "Tổng quan vận hành"],
   devices: ["SIM INVENTORY", "Quản lý thiết bị"],
+  import: ["SIM DATABASE", "Import danh sách SIM"],
   messages: ["MESSAGE CENTER", "Tin nhắn SMS"],
   calls: ["VOICE OPERATIONS", "Cuộc gọi"],
   settings: ["DELIVERY CONTROL", "Settings"]
@@ -56,6 +57,28 @@ function bindActions() {
   $("#webhook-form").addEventListener("submit", saveWebhook);
   $("#test-webhook").addEventListener("click", testWebhook);
   $("#test-telegram").addEventListener("click", testTelegram);
+  $("#excel-import-form").addEventListener("submit", importExcel);
+  $("#text-import-form").addEventListener("submit", importText);
+  $("#sim-excel-file").addEventListener("change", event => {
+    $("#excel-file-label").textContent = event.target.files[0]?.name || "Chọn hoặc kéo file Excel vào đây";
+  });
+  const dropZone = $("#excel-drop-zone");
+  ["dragenter", "dragover"].forEach(name => dropZone.addEventListener(name, event => {
+    event.preventDefault();
+    dropZone.classList.add("dragging");
+  }));
+  ["dragleave", "drop"].forEach(name => dropZone.addEventListener(name, event => {
+    event.preventDefault();
+    dropZone.classList.remove("dragging");
+  }));
+  dropZone.addEventListener("drop", event => {
+    const file = event.dataTransfer.files[0];
+    if (!file) return;
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    $("#sim-excel-file").files = transfer.files;
+    $("#excel-file-label").textContent = file.name;
+  });
 }
 
 async function refreshAll() {
@@ -78,7 +101,8 @@ async function api(url, options = {}) {
 
 async function loadSims() {
   try {
-    state.sims = await api(API + "/sim/list") || [];
+    const records = await api(TOOL + "/sims") || [];
+    state.sims = records.map(normalizeSim);
     renderDevices();
     renderOverviewSims();
     fillPortSelects();
@@ -122,7 +146,9 @@ function fillPortSelects() {
   ["#sms-port", "#call-port"].forEach(selector => {
     const select = $(selector);
     const selected = select.value;
-    select.innerHTML = '<option value="">Chọn cổng COM</option>' + state.sims.map(sim =>
+    select.innerHTML = '<option value="">Chọn cổng COM</option>' + state.sims
+      .filter(sim => sim.comPort)
+      .map(sim =>
       `<option value="${escapeHtml(sim.comPort)}">${escapeHtml(sim.comPort)} — ${escapeHtml(sim.phoneNumber || "Chưa có số")}</option>`
     ).join("");
     select.value = selected;
@@ -133,9 +159,9 @@ async function scanSims() {
   const buttons = [$("#scan-sims"), $("#hero-scan")].filter(Boolean);
   buttons.forEach(button => { button.disabled = true; button.textContent = "Đang quét…"; });
   try {
-    state.sims = await api(API + "/sim/scan") || [];
+    await api(API + "/sim/scan");
+    await loadSims();
     toast("Quét SIM hoàn tất", "success");
-    renderDevices(); renderOverviewSims(); fillPortSelects();
   } catch (error) { toast(error.message, "error"); }
   finally {
     if ($("#scan-sims")) { $("#scan-sims").disabled = false; $("#scan-sims").textContent = "↻ Quét SIM"; }
@@ -160,9 +186,17 @@ async function loadStats() {
 
 async function loadMessages() {
   try {
-    const endpoint = state.smsTab === "INBOX" ? "inbox" : state.smsTab === "SENT" ? "sent" : "outbox";
-    const page = await api(`${API}/sms/${endpoint}?page=0&size=60`) || {};
-    const messages = page.content || [];
+    const direction = state.smsTab === "INBOX" ? "INBOUND" : "OUTBOUND";
+    const page = await api(`${TOOL}/sms?direction=${direction}&page=0&size=200`) || {};
+    let messages = page.content || [];
+    if (state.smsTab === "SENT") {
+      messages = messages.filter(item => ["SENT", "SUCCESS", "PENDING"]
+        .includes(String(item.status).toUpperCase()));
+    }
+    if (state.smsTab === "OUTBOX") {
+      messages = messages.filter(item => ["FAILED", "ERROR"]
+        .includes(String(item.status).toUpperCase()));
+    }
     $("#message-list").innerHTML = messages.length ? messages.map(messageCard).join("") : '<div class="empty">Chưa có tin nhắn trong mục này</div>';
     if (state.smsTab === "INBOX") renderRecentSms(messages.slice(0, 8));
   } catch (error) {
@@ -171,7 +205,8 @@ async function loadMessages() {
 }
 
 function messageCard(message) {
-  const inbound = (message.type || "").toUpperCase() === "INBOX";
+  const inbound = (message.direction || "").toUpperCase() === "INBOUND"
+    || (message.type || "").toUpperCase() === "INBOX";
   return `<article class="message-item">
     <span class="message-direction ${inbound ? "" : "out"}">${inbound ? "↓" : "↑"}</span>
     <div class="message-copy"><header><h4>${escapeHtml(message.phoneNumber || "Không rõ")}</h4><time>${formatDate(message.createdAt)}</time></header><p>${escapeHtml(message.content || "")}</p><small>${escapeHtml(message.simPhone || "")} · ${escapeHtml(message.comPort || "—")}</small></div>
@@ -199,6 +234,63 @@ async function sendSms(event) {
     setTimeout(loadMessages, 900);
   } catch (error) { toast(error.message, "error"); }
   finally { button.disabled = false; button.textContent = "Gửi qua SIM đã chọn"; }
+}
+
+async function importExcel(event) {
+  event.preventDefault();
+  const file = $("#sim-excel-file").files[0];
+  if (!file) return toast("Hãy chọn file Excel", "error");
+  const button = event.submitter;
+  button.disabled = true;
+  button.textContent = "Đang import…";
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch(TOOL + "/sims/import/excel", { method: "POST", body: form });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.error || "Không import được Excel");
+    renderImportResult(result);
+    toast("Import Excel hoàn tất", "success");
+    await loadSims();
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Import từ Excel";
+  }
+}
+
+async function importText(event) {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  button.textContent = "Đang import…";
+  try {
+    const result = await api(TOOL + "/sims/import/text", {
+      method: "POST",
+      body: JSON.stringify({ text: $("#sim-import-text").value })
+    });
+    renderImportResult(result);
+    toast("Import nội dung hoàn tất", "success");
+    await loadSims();
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Import nội dung";
+  }
+}
+
+function renderImportResult(result) {
+  const warnings = result.warnings || [];
+  $("#import-result").className = "";
+  $("#import-result").innerHTML = `<div class="result-metrics">
+    <div><strong>${Number(result.totalRows || 0)}</strong><small>Tổng dòng</small></div>
+    <div><strong>${Number(result.created || 0)}</strong><small>Tạo mới</small></div>
+    <div><strong>${Number(result.updated || 0)}</strong><small>Cập nhật</small></div>
+    <div><strong>${Number(result.fuzzyMatched || 0)}</strong><small>CCID gần đúng</small></div>
+    <div><strong>${Number(result.skipped || 0)}</strong><small>Bỏ qua</small></div>
+  </div>${warnings.length ? `<ul class="import-warnings">${warnings.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}`;
 }
 
 async function makeCall(event) {
@@ -289,7 +381,7 @@ function connectWebSocket() {
     const client = Stomp.over(new SockJS("/ws")); client.debug = null;
     client.connect({}, () => {
       setConnection(true);
-      client.subscribe("/topic/sims", message => { try { state.sims = JSON.parse(message.body); renderDevices(); renderOverviewSims(); fillPortSelects(); } catch (_) {} });
+      client.subscribe("/topic/sims", message => { try { state.sims = JSON.parse(message.body).map(normalizeSim); renderDevices(); renderOverviewSims(); fillPortSelects(); } catch (_) {} });
       client.subscribe("/topic/sms/new", () => { loadMessages(); loadStats(); toast("Có SMS mới — đã chuyển tiếp tới các kênh", "success"); });
       client.subscribe("/topic/sms/status", () => loadMessages());
       client.subscribe("/topic/call/status", () => loadCalls());
@@ -299,6 +391,15 @@ function connectWebSocket() {
 function setConnection(online) {
   $("#connection-dot").classList.toggle("online", online);
   $("#connection-label").textContent = online ? "Đã kết nối" : "Mất kết nối";
+}
+function normalizeSim(sim) {
+  return {
+    ...sim,
+    comPort: sim.comPort || sim.comName || "",
+    carrier: sim.carrier || sim.simProvider || "",
+    iccid: sim.iccid || sim.ccid || "",
+    status: sim.status === "ACTIVE" ? "ONLINE" : sim.status
+  };
 }
 function updateClock() {
   $("#live-clock").textContent = new Intl.DateTimeFormat("vi-VN", { weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date());

@@ -25,6 +25,10 @@ spring:
       # Dùng cùng Mongo server cũ nhưng database mới phải là "simtech".
       uri: ${MONGODB_URI}
       auto-index-creation: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 gsm:
   otp-only: true

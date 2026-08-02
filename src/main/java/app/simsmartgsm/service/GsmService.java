@@ -10,6 +10,8 @@ import app.simsmartgsm.uitils.PortWorker;
 import app.simsmartgsm.entity.CallRecordEntity;
 import app.simsmartgsm.entity.Sim;
 import app.simsmartgsm.entity.SmsMessageEntity;
+import app.simsmartgsm.tool.model.SmsDocument;
+import app.simsmartgsm.tool.repository.ToolSmsRepository;
 import app.simsmartgsm.repository.CallRecordJpaRepository;
 import app.simsmartgsm.repository.SimRepository;
 import app.simsmartgsm.repository.SmsMessageJpaRepository;
@@ -69,6 +71,7 @@ public class GsmService {
     private final app.simsmartgsm.config.PortResolver portResolver;
     private final SimCleanupService simCleanupService;
     private final SmsDailyLimitService smsDailyLimitService;
+    private final ToolSmsRepository mongoSmsRepository;
 
     private final app.simsmartgsm.repository.CallMessageRepository callMessageRepository;
 
@@ -291,6 +294,7 @@ public class GsmService {
 
         sms = smsRepository.save(sms);
         final Long smsId = sms.getId();
+        saveMongoOutbound(request, smsId, "PENDING", null, null);
 
         try {
             // Tìm SIM theo comPort
@@ -301,6 +305,7 @@ public class GsmService {
                 sms.setType("OUTBOX");
                 sms.setErrorMessage("Không tìm thấy SIM");
                 sms = smsRepository.save(sms);
+                saveMongoOutbound(request, smsId, "FAILED", sms.getErrorMessage(), null);
                 messagingTemplate.convertAndSend("/topic/sms/status", sms);
                 return sms;
             }
@@ -315,6 +320,7 @@ public class GsmService {
                 sms.setType("OUTBOX");
                 sms.setErrorMessage("Không thể kết nối modem");
                 sms = smsRepository.save(sms);
+                saveMongoOutbound(request, smsId, "FAILED", sms.getErrorMessage(), sim.getPhoneNumber());
                 messagingTemplate.convertAndSend("/topic/sms/status", sms);
                 return sms;
             }
@@ -340,8 +346,31 @@ public class GsmService {
             sms.setType("OUTBOX");
             sms.setErrorMessage(e.getMessage());
             sms = smsRepository.save(sms);
+            saveMongoOutbound(request, smsId, "FAILED", sms.getErrorMessage(), null);
             messagingTemplate.convertAndSend("/topic/sms/status", sms);
             return sms;
+        }
+    }
+
+    private void saveMongoOutbound(SendSmsRequest request, Long smsId, String status,
+            String modemResponse, String simPhone) {
+        try {
+            String fingerprint = "outbound:" + smsId;
+            SmsDocument document = mongoSmsRepository.findByFingerprint(fingerprint)
+                    .orElseGet(() -> SmsDocument.builder()
+                            .fingerprint(fingerprint)
+                            .createdAt(Instant.now())
+                            .build());
+            document.setComPort(request.getComPort());
+            document.setSimPhone(simPhone);
+            document.setPhoneNumber(request.getPhoneNumber());
+            document.setDirection("OUTBOUND");
+            document.setContent(request.getContent());
+            document.setStatus(status);
+            document.setModemResponse(modemResponse);
+            mongoSmsRepository.save(document);
+        } catch (Exception e) {
+            log.error("Không thể lưu SMS gửi vào Mongo: {}", e.getMessage());
         }
     }
 

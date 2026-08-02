@@ -9,14 +9,13 @@ import app.simsmartgsm.uitils.DeviceIdProvider;
 import app.simsmartgsm.uitils.PortWorker;
 import app.simsmartgsm.uitils.SimStatus;
 import app.simsmartgsm.uitils.SmsDecoder;
+import app.simsmartgsm.tool.service.CcidMatcher;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.Document;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -37,16 +36,13 @@ public class SimSyncService {
     private final PortManager portManager;
     private final SimpMessagingTemplate messagingTemplate;
     private final app.simsmartgsm.config.ComManager comManager;
-    private final MongoTemplate mongoTemplate;
+    private final CcidMatcher ccidMatcher;
 
     // ✅ OPTIMIZED: Sử dụng 2 thread để quét tuần tự tránh gây nghẽn và sụt áp USB Hub, đảm bảo quét chính xác 100% các SIM
     private static final int THREAD_POOL_SIZE = 2;
     private static final long SCAN_TIMEOUT_MIN = 5; // 5 phút đủ để scan 96 ports
     private static final int MISS_THRESHOLD = 2; // ✅ Giảm từ 10→2: chuyển sang REPLACED nhanh hơn khi thay SIM
     private static final int INACTIVE_THRESHOLD = 1; // ✅ Giảm từ 5→1: chuyển sang INACTIVE ngay lập tức khi mất SIM
-
-    // 🆕 CCID fuzzy match: chỉ cần trùng 18 số liên tục là coi như match
-    private static final int CCID_FUZZY_MATCH_LENGTH = 18;
 
     // Regex patterns
     private static final Pattern CSQ_PATTERN = Pattern.compile("\\+CSQ: (\\d+),");
@@ -1209,6 +1205,10 @@ public class SimSyncService {
 
         sim.setImsi(ss.imsi);
         sim.setComName(ss.comName);
+        // Lưu CCID thực tế từ modem; importedCcid vẫn được giữ riêng để audit và
+        // đối chiếu lại nếu modem trả chuỗi khác ở lần quét sau.
+        sim.setCcid(ccidMatcher.normalize(ss.ccid));
+        sim.setDataSource("SCAN");
 
         // ✅ FIX: Chỉ cập nhật phoneNumber nếu scan được số mới từ AT command
         // Nếu AT command không lấy được số (null), giữ nguyên số cũ trong DB
@@ -1517,109 +1517,28 @@ public class SimSyncService {
             return exactMatch;
         }
 
-        // 2️⃣ Fuzzy match bằng MongoTemplate (bypass _class filter)
-        // Tạo các variant CCID để tìm kiếm
-        String ccidDigitsOnly = scannedCcid.replaceAll("[^0-9]", ""); // Bỏ trailing F và ký tự đặc biệt
-        Set<String> searchPatterns = new LinkedHashSet<>();
-        searchPatterns.add(scannedCcid); // Original
-        if (!ccidDigitsOnly.equals(scannedCcid)) {
-            searchPatterns.add(ccidDigitsOnly); // Không có F
-        }
-        // Thêm variant bỏ trailing F
-        if (scannedCcid.toUpperCase().endsWith("F")) {
-            searchPatterns.add(scannedCcid.substring(0, scannedCcid.length() - 1));
-        }
-
-        log.debug("🔍 CCID fuzzy search patterns: {}", searchPatterns);
-
-        try {
-            // 2a. Thử exact match các variant (ví dụ: bỏ trailing F)
-            for (String pattern : searchPatterns) {
-                Document found = mongoTemplate.getDb().getCollection("sims")
-                        .find(new Document("ccid", pattern)
-                                .append("phoneNumber", new Document("$ne", null)))
-                        .first();
-                if (found != null && found.getString("phoneNumber") != null
-                        && !found.getString("phoneNumber").isBlank()) {
-                    String phone = found.getString("phoneNumber");
-                    String foundCcid = found.getString("ccid");
-                    log.info("🔗 CCID variant match! phone={} từ CCID={} → scan CCID={}",
-                            phone, foundCcid, scannedCcid);
-
-                    if (exactMatch.isPresent()) {
-                        // MERGE: copy phone vào scan record
-                        Sim scanRecord = exactMatch.get();
-                        scanRecord.setPhoneNumber(phone);
-                        // Xóa record import duplicate
-                        try {
-                            mongoTemplate.getDb().getCollection("sims")
-                                    .deleteOne(new Document("_id", found.get("_id")));
-                            log.info("🗑️ Đã xóa record import duplicate: ccid={}", foundCcid);
-                        } catch (Exception e) {
-                            log.warn("⚠️ Không xóa được duplicate: {}", e.getMessage());
-                        }
-                        return Optional.of(scanRecord);
-                    } else {
-                        // Tạo Sim object từ document
-                        Sim sim = Sim.builder()
-                                .id(found.getString("_id"))
-                                .ccid(foundCcid)
-                                .phoneNumber(phone)
-                                .status(found.getString("status"))
-                                .countryCode(found.getString("countryCode"))
-                                .build();
-                        return Optional.of(sim);
-                    }
-                }
+        // So khớp có chấm điểm: xử lý prefix/suffix, ký tự đệm và sai khác tối đa
+        // hai chữ số. Chỉ tự ghép khi có một ứng viên tốt nhất duy nhất.
+        List<Sim> candidatesWithPhone = simRepository.findAll().stream()
+                .filter(candidate -> notBlank(candidate.getPhoneNumber()))
+                .filter(candidate -> exactMatch.isEmpty()
+                        || !Objects.equals(candidate.getId(), exactMatch.get().getId()))
+                .toList();
+        Optional<CcidMatcher.Match> scoredMatch = ccidMatcher.findBest(scannedCcid, candidatesWithPhone);
+        if (scoredMatch.isPresent()) {
+            Sim imported = scoredMatch.get().sim();
+            if (exactMatch.isPresent()) {
+                Sim scanned = exactMatch.get();
+                scanned.setPhoneNumber(imported.getPhoneNumber());
+                scanned.setImportedCcid(imported.getImportedCcid());
+                scanned.setImportedCcidNormalized(imported.getImportedCcidNormalized());
+                scanned.setImportSequence(imported.getImportSequence());
+                scanned.setCcidMatchScore(scoredMatch.get().score());
+                simRepository.delete(imported);
+                return Optional.of(scanned);
             }
-
-            // 2b. Regex fuzzy match (18 ký tự liên tục)
-            if (ccidDigitsOnly.length() >= CCID_FUZZY_MATCH_LENGTH) {
-                for (int i = 0; i <= ccidDigitsOnly.length() - CCID_FUZZY_MATCH_LENGTH; i++) {
-                    String sub18 = ccidDigitsOnly.substring(i, i + CCID_FUZZY_MATCH_LENGTH);
-                    Document found = mongoTemplate.getDb().getCollection("sims")
-                            .find(new Document("ccid", new Document("$regex", sub18))
-                                    .append("phoneNumber", new Document("$ne", null)))
-                            .first();
-                    if (found != null && found.getString("phoneNumber") != null
-                            && !found.getString("phoneNumber").isBlank()) {
-                        String phone = found.getString("phoneNumber");
-                        String foundCcid = found.getString("ccid");
-
-                        // Bỏ qua nếu tìm thấy chính nó
-                        if (foundCcid.equals(scannedCcid))
-                            continue;
-
-                        log.info("🔗 CCID fuzzy MERGE! phone={} từ imported CCID={} → scan CCID={} (trùng 18 số: {})",
-                                phone, foundCcid, scannedCcid, sub18);
-
-                        if (exactMatch.isPresent()) {
-                            Sim scanRecord = exactMatch.get();
-                            scanRecord.setPhoneNumber(phone);
-                            // Xóa record import duplicate
-                            try {
-                                mongoTemplate.getDb().getCollection("sims")
-                                        .deleteOne(new Document("_id", found.get("_id")));
-                                log.info("🗑️ Đã xóa record import duplicate: ccid={}", foundCcid);
-                            } catch (Exception e) {
-                                log.warn("⚠️ Không xóa được duplicate: {}", e.getMessage());
-                            }
-                            return Optional.of(scanRecord);
-                        } else {
-                            Sim sim = Sim.builder()
-                                    .id(found.getString("_id"))
-                                    .ccid(foundCcid)
-                                    .phoneNumber(phone)
-                                    .status(found.getString("status"))
-                                    .countryCode(found.getString("countryCode"))
-                                    .build();
-                            return Optional.of(sim);
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.warn("⚠️ CCID fuzzy search error: {}", e.getMessage());
+            imported.setCcidMatchScore(scoredMatch.get().score());
+            return Optional.of(imported);
         }
 
         // Trả về exact match (dù không có phone) hoặc empty
@@ -1644,86 +1563,33 @@ public class SimSyncService {
             return exactMatch;
         }
 
-        // 2️⃣ Fuzzy match: tìm record CÓ phone number
-        if (scannedCcid.length() >= CCID_FUZZY_MATCH_LENGTH) {
-            Set<String> scannedSubs = new HashSet<>();
-            for (int i = 0; i <= scannedCcid.length() - CCID_FUZZY_MATCH_LENGTH; i++) {
-                scannedSubs.add(scannedCcid.substring(i, i + CCID_FUZZY_MATCH_LENGTH));
+        List<Sim> scoredCandidates = dbMapByCcid.values().stream()
+                .distinct()
+                .filter(candidate -> exactMatch == null
+                        || !Objects.equals(candidate.getId(), exactMatch.getId()))
+                .toList();
+        Optional<CcidMatcher.Match> scoredMatch = ccidMatcher.findBest(scannedCcid, scoredCandidates);
+        if (scoredMatch.isPresent()) {
+            Sim matched = scoredMatch.get().sim();
+            if (exactMatch != null && notBlank(matched.getPhoneNumber())) {
+                exactMatch.setPhoneNumber(matched.getPhoneNumber());
+                exactMatch.setImportedCcid(matched.getImportedCcid());
+                exactMatch.setImportedCcidNormalized(matched.getImportedCcidNormalized());
+                exactMatch.setImportSequence(matched.getImportSequence());
+                exactMatch.setCcidMatchScore(scoredMatch.get().score());
+                simRepository.delete(matched);
+                dbMapByCcid.values().removeIf(value -> Objects.equals(value.getId(), matched.getId()));
+                return exactMatch;
             }
-
-            // ✅ Ưu tiên tìm record có phone number trước
-            Sim fuzzyWithPhone = null;
-            Sim fuzzyAny = null;
-            String matchedSub = null;
-
-            for (Map.Entry<String, Sim> entry : dbMapByCcid.entrySet()) {
-                String dbCcid = entry.getKey();
-                if (dbCcid != null && dbCcid.length() >= CCID_FUZZY_MATCH_LENGTH
-                        && !dbCcid.equals(scannedCcid)) { // Loại trừ chính nó
-                    for (int i = 0; i <= dbCcid.length() - CCID_FUZZY_MATCH_LENGTH; i++) {
-                        String dbSub = dbCcid.substring(i, i + CCID_FUZZY_MATCH_LENGTH);
-                        if (scannedSubs.contains(dbSub)) {
-                            Sim matched = entry.getValue();
-                            if (notBlank(matched.getPhoneNumber())) {
-                                fuzzyWithPhone = matched;
-                                matchedSub = dbSub;
-                                break; // Tìm thấy record có phone → đủ rồi
-                            }
-                            if (fuzzyAny == null) {
-                                fuzzyAny = matched;
-                                matchedSub = dbSub;
-                            }
-                        }
-                    }
-                    if (fuzzyWithPhone != null)
-                        break;
-                }
-            }
-
-            if (fuzzyWithPhone != null) {
-                if (exactMatch != null) {
-                    // ✅ MERGE: Copy phone từ imported → scan record
-                    log.info("🔗 CCID fuzzy MERGE (map)! phone={} từ imported CCID={} → scan CCID={}",
-                            fuzzyWithPhone.getPhoneNumber(), fuzzyWithPhone.getCcid(), scannedCcid);
-                    exactMatch.setPhoneNumber(fuzzyWithPhone.getPhoneNumber());
-                    // Xóa record import duplicate
-                    try {
-                        simRepository.delete(fuzzyWithPhone);
-                        dbMapByCcid.remove(fuzzyWithPhone.getCcid());
-                        log.info("🗑️ Đã xóa record import duplicate: ccid={}", fuzzyWithPhone.getCcid());
-                    } catch (Exception e) {
-                        log.warn("⚠️ Không xóa được duplicate: {}", e.getMessage());
-                    }
-                    return exactMatch;
-                } else {
-                    log.info("🔗 CCID fuzzy match (map)! scanned={} ↔ db={} (trùng 18 số: {})",
-                            scannedCcid, fuzzyWithPhone.getCcid(), matchedSub);
-                    return fuzzyWithPhone;
-                }
-            }
-
-            // Không có fuzzy với phone → trả fuzzy bất kỳ nếu không có exact
-            if (exactMatch == null && fuzzyAny != null) {
-                log.info("🔗 CCID fuzzy match (map, no phone)! scanned={} ↔ db={} (trùng 18 số: {})",
-                        scannedCcid, fuzzyAny.getCcid(), matchedSub);
-                return fuzzyAny;
-            }
+            matched.setCcidMatchScore(scoredMatch.get().score());
+            return matched;
         }
 
         return exactMatch; // Trả exact match (dù không phone) hoặc null
     }
 
     private boolean isCcidFuzzyMatch(String ccid1, String ccid2) {
-        if (ccid1 == null || ccid2 == null) return false;
-        if (ccid1.equals(ccid2)) return true;
-        String d1 = ccid1.replaceAll("[^0-9]", "");
-        String d2 = ccid2.replaceAll("[^0-9]", "");
-        if (d1.length() >= CCID_FUZZY_MATCH_LENGTH && d2.length() >= CCID_FUZZY_MATCH_LENGTH) {
-            String sub1 = d1.substring(0, CCID_FUZZY_MATCH_LENGTH);
-            String sub2 = d2.substring(0, CCID_FUZZY_MATCH_LENGTH);
-            return sub1.equals(sub2);
-        }
-        return d1.equals(d2);
+        return ccidMatcher.score(ccid1, ccid2) >= 70;
     }
 
     // ================== DATA CLASSES ==================

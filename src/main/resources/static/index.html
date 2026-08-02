@@ -21,6 +21,7 @@
       <nav class="main-nav" aria-label="Điều hướng chính">
         <button class="nav-link active" data-page="overview"><span>◫</span><b>Tổng quan</b></button>
         <button class="nav-link" data-page="devices"><span>▤</span><b>Thiết bị</b></button>
+        <button class="nav-link" data-page="import"><span>⇧</span><b>Import SIM</b></button>
         <button class="nav-link" data-page="messages"><span>✉</span><b>Tin nhắn</b><i id="nav-unread">0</i></button>
         <button class="nav-link" data-page="calls"><span>☎</span><b>Cuộc gọi</b></button>
         <button class="nav-link" data-page="settings"><span>⚙</span><b>Settings</b></button>
@@ -85,12 +86,54 @@
       <section class="page" id="page-devices">
         <div class="section-toolbar">
           <div class="search-box">⌕ <input id="sim-search" placeholder="Tìm số điện thoại, cổng COM, ICCID…"></div>
-          <select id="sim-status-filter"><option value="">Mọi trạng thái</option><option value="ONLINE">Online</option><option value="OFFLINE">Offline</option><option value="INACTIVE">Inactive</option></select>
+          <select id="sim-status-filter"><option value="">Mọi trạng thái</option><option value="ONLINE">Online</option><option value="OFFLINE">Offline</option><option value="INACTIVE">Inactive</option><option value="IMPORTED">Đã import</option></select>
           <button class="button primary" id="scan-sims">↻ Quét SIM</button>
         </div>
         <div class="panel">
           <div class="panel-head"><div><span class="section-kicker">SIM INVENTORY</span><h3>Danh sách thiết bị</h3></div><span class="count-badge" id="sim-count">0 SIM</span></div>
           <div class="device-grid" id="device-grid"><div class="empty">Đang tải thiết bị…</div></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-import">
+        <div class="import-intro">
+          <div><span class="section-kicker">SIM DATABASE</span><h2>Nhập danh sách SIM<br>trước khi cắm thiết bị.</h2></div>
+          <p>Hệ thống dùng CCID để tìm số điện thoại khi modem không đọc được số. CCID được chuẩn hóa và so khớp an toàn ngay cả khi chuỗi quét có thêm ký tự hoặc lệch nhẹ.</p>
+        </div>
+        <div class="import-grid">
+          <article class="panel import-card">
+            <div class="panel-head"><div><span class="section-kicker">EXCEL</span><h3>Import file Excel</h3></div><span class="file-type">XLSX / XLS</span></div>
+            <form id="excel-import-form" class="import-body">
+              <label class="drop-zone" id="excel-drop-zone">
+                <input id="sim-excel-file" type="file" accept=".xlsx,.xls" required>
+                <span class="drop-icon">⇧</span>
+                <b id="excel-file-label">Chọn hoặc kéo file Excel vào đây</b>
+                <small>Tối đa 10 MB · sheet đầu tiên</small>
+              </label>
+              <div class="column-guide"><span>01</span><div><b>Định dạng cột</b><small>STT · SĐT · CCID</small></div></div>
+              <div class="import-warning"><b>Lưu ý quan trọng</b><span>Trong Excel, hãy đặt cột CCID ở định dạng <strong>Text</strong> để không mất chữ số thứ 16 trở đi.</span></div>
+              <button class="button primary wide" type="submit">Import từ Excel</button>
+            </form>
+          </article>
+
+          <article class="panel import-card">
+            <div class="panel-head"><div><span class="section-kicker">PASTE TEXT</span><h3>Dán dữ liệu trực tiếp</h3></div><span class="file-type">CSV / TSV</span></div>
+            <form id="text-import-form" class="import-body">
+              <textarea id="sim-import-text" class="import-textarea" rows="12" placeholder="STT, SĐT, CCID&#10;1, 0901234567, 8981041012345678901&#10;2, 0907654321, 8981041098765432109" required></textarea>
+              <p class="format-note">Chấp nhận dấu phẩy, tab, chấm phẩy hoặc dấu <code>|</code>.</p>
+              <button class="button primary wide" type="submit">Import nội dung</button>
+            </form>
+          </article>
+
+          <article class="panel import-result-card">
+            <div class="panel-head"><div><span class="section-kicker">IMPORT RESULT</span><h3>Kết quả gần nhất</h3></div></div>
+            <div id="import-result" class="import-empty">Chưa có phiên import nào.</div>
+          </article>
+
+          <article class="panel match-explain-card">
+            <div class="panel-head"><div><span class="section-kicker">CCID MATCHING</span><h3>Cách hệ thống đối chiếu</h3></div></div>
+            <ol class="match-steps"><li><b>Chuẩn hóa</b><span>Bỏ khoảng trắng, dấu phân cách, prefix ICCID và ký tự F đệm.</span></li><li><b>So khớp</b><span>Ưu tiên exact, sau đó prefix/suffix, độ dài và sai khác tối đa 2 số.</span></li><li><b>Chống gán nhầm</b><span>Nếu có hai ứng viên ngang điểm, hệ thống không tự ghép.</span></li></ol>
+          </article>
         </div>
       </section>
 

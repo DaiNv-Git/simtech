@@ -59,6 +59,12 @@ public class MongoIndexConfig {
             indexOps.ensureIndex(phoneIndex);
             log.info("✅ Created index on 'phoneNumber' field");
 
+            Index importedCcidIndex = new Index()
+                    .on("importedCcidNormalized", Sort.Direction.ASC)
+                    .sparse();
+            indexOps.ensureIndex(importedCcidIndex);
+            log.info("✅ Created index on 'importedCcidNormalized' field");
+
             // ✅ Index cho status (filter nhanh)
             Index statusIndex = new Index()
                     .on("status", Sort.Direction.ASC);
