@@ -58,5 +58,8 @@ public class GsmToolService {
         }
         return smsRepository.findByDirectionOrderByCreatedAtDesc(direction.toUpperCase(), pageable);
     }
-}
 
+    public int deleteAllSms() {
+        return gsmService.deleteAllSmsMessages();
+    }
+}

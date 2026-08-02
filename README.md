@@ -22,6 +22,12 @@ dài/ngắn hơn, rồi sai khác tối đa hai chữ số. Trường hợp có 
 - `POST /api/tool/sims/import/excel`: upload multipart với field `file`.
 - `POST /api/tool/sims/import/text`: JSON `{ "text": "STT,SĐT,CCID..." }`.
 
+## Lưu trữ
+
+- Không dùng H2/JPA; SIM, SMS và lịch sử Call đều được lưu trong MongoDB.
+- SMS gửi/nhận dùng chung collection `sms`, không lưu trùng hai bản.
+- Màn Lịch sử tin nhắn có nút **Xóa tất cả** và yêu cầu xác nhận trước khi xóa.
+
 ## Cấu hình
 
 Thiết lập các biến môi trường trước khi chạy:

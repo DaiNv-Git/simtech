@@ -8,8 +8,6 @@ import app.simsmartgsm.uitils.SimStatus;
 import app.simsmartgsm.uitils.OtpSessionType;
 import app.simsmartgsm.uitils.PortWorker;
 import app.simsmartgsm.uitils.SmsDecoder;
-import app.simsmartgsm.tool.model.SmsDocument;
-import app.simsmartgsm.tool.repository.ToolSmsRepository;
 import app.simsmartgsm.tool.service.TelegramService;
 import app.simsmartgsm.tool.service.WebhookService;
 import lombok.AllArgsConstructor;
@@ -33,10 +31,9 @@ public class GsmListenerService {
     private final CallRecordService callRecordService;
     private final TelegramService telegramService;
     private final WebhookService webhookService;
-    private final ToolSmsRepository mongoSmsRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final SimRepository simRepository;
-    private final app.simsmartgsm.repository.SmsMessageJpaRepository smsRepository;
+    private final app.simsmartgsm.repository.SmsHistoryRepository smsRepository;
     private final app.simsmartgsm.service.SmsDailyLimitService smsDailyLimitService;
 
     private final Map<String, PortWorker> workers = new ConcurrentHashMap<>();
@@ -101,19 +98,20 @@ public class GsmListenerService {
 
             log.debug("📩 [{}] SMS → From: {} | Body: {}", sim.getComName(), decodedSender, decodedBody);
 
-            // ✅ Step 1: Lưu SMS vào database local (với nội dung đã decode)
+            // Step 1: Lưu SMS vào MongoDB (với nội dung đã decode)
             app.simsmartgsm.entity.SmsMessageEntity smsEntity = app.simsmartgsm.entity.SmsMessageEntity.builder()
                     .comPort(sim.getComName())
                     .simPhone(sim.getPhoneNumber())
                     .phoneNumber(decodedSender)
                     .content(decodedBody)
                     .type("INBOX")
+                    .direction("INBOUND")
                     .status("RECEIVED")
                     .isRead(false)
                     .build();
 
             smsEntity = smsRepository.save(smsEntity);
-            log.debug("💾 [{}] SMS saved to local DB: id={}", sim.getComName(), smsEntity.getId());
+            log.debug("💾 [{}] SMS saved to MongoDB: id={}", sim.getComName(), smsEntity.getId());
 
 
             // ✅ Step 2: Đếm số tin chưa đọc
@@ -153,9 +151,6 @@ public class GsmListenerService {
                     "📡 [{}] WebSocket notifications sent: /topic/sms/inbox, /topic/sms/new, /topic/sms/unread-count (unread={})",
                     sim.getComName(), unreadCount);
 
-            // Lưu vào collection Mongo "sms" rồi đẩy Telegram. Dashboard local vẫn
-            // dùng bản H2 ở trên để giữ nguyên tương thích.
-            saveMongoSms(sim, decodedSender, decodedBody, "INBOUND", "RECEIVED", null);
             telegramService.sendIncomingSms(sim.getComName(), sim.getPhoneNumber(), decodedSender, decodedBody);
             webhookService.sendIncomingSms(sim.getComName(), sim.getPhoneNumber(), decodedSender, decodedBody);
 
@@ -251,7 +246,6 @@ public class GsmListenerService {
                 String msgId = getMsgId(localMsgId, orderId, state);
                 recordSmsResult(sim, to, content, orderId, serviceCode, msgId, true,
                         state != null ? state.triedSims : null);
-                saveMongoSms(sim, to, content, "OUTBOUND", "SENT", orderId);
 
                 if (state != null && state.triedSims.size() > 1) {
                     log.info("✅ [SMS_RESULT] SUCCESS after switching SIMs! Tried: {} -> Final: {}",
@@ -280,39 +274,11 @@ public class GsmListenerService {
 
                 // Update local database
                 updateLocalSmsStatus(orderId, false, "SMS failed after all retries");
-                saveMongoSms(sim, to, content, "OUTBOUND", "FAILED", orderId);
 
             }
 
         } catch (Exception e) {
             log.error("❌ [SMS_RESULT] push failed: {}", e.getMessage(), e);
-        }
-    }
-
-    private void saveMongoSms(Sim sim, String phoneNumber, String content,
-            String direction, String status, String referenceId) {
-        try {
-            String fingerprint = referenceId == null || referenceId.isBlank()
-                    ? null
-                    : "outbound:" + referenceId;
-            SmsDocument document = fingerprint == null
-                    ? null
-                    : mongoSmsRepository.findByFingerprint(fingerprint).orElse(null);
-            if (document == null) {
-                document = SmsDocument.builder()
-                        .fingerprint(fingerprint)
-                        .createdAt(Instant.now())
-                        .build();
-            }
-            document.setComPort(sim != null ? sim.getComName() : null);
-            document.setSimPhone(sim != null ? sim.getPhoneNumber() : null);
-            document.setPhoneNumber(phoneNumber);
-            document.setDirection(direction);
-            document.setContent(content);
-            document.setStatus(status);
-            mongoSmsRepository.save(document);
-        } catch (Exception e) {
-            log.error("Không thể lưu SMS vào Mongo: {}", e.getMessage());
         }
     }
 
@@ -324,21 +290,20 @@ public class GsmListenerService {
             return;
 
         try {
-            Long smsId = Long.parseLong(orderId);
-            smsRepository.findById(smsId).ifPresent(sms -> {
+            smsRepository.findById(orderId).ifPresent(sms -> {
                 sms.setStatus(success ? "SENT" : "FAILED");
                 sms.setType(success ? "SENT" : "OUTBOX");
                 if (!success && errorMessage != null) {
                     sms.setErrorMessage(errorMessage);
                 }
                 smsRepository.save(sms);
-                log.debug("💾 [DB] Updated SMS {} status to {}", smsId, sms.getStatus());
+                log.debug("💾 [Mongo] Updated SMS {} status to {}", orderId, sms.getStatus());
 
                 // Push to WebSocket
                 simpMessagingTemplate.convertAndSend("/topic/sms/status", sms);
             });
-        } catch (NumberFormatException e) {
-            log.debug("⚠️ [SMS_RESULT] orderId is not a local DB ID: {}", orderId);
+        } catch (Exception e) {
+            log.warn("⚠️ [SMS_RESULT] Không cập nhật được SMS {}: {}", orderId, e.getMessage());
         }
     }
 

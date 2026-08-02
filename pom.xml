@@ -195,19 +195,6 @@
 			<version>1.2.2</version>
 		</dependency>
 
-		<!-- Spring Data JPA (for JPA repositories) -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-
-		<!-- H2 Database (in-memory for JPA entities) -->
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-
 	</dependencies>
 
 	<build>

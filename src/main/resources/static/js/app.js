@@ -59,6 +59,7 @@ function bindActions() {
   $("#test-telegram").addEventListener("click", testTelegram);
   $("#excel-import-form").addEventListener("submit", importExcel);
   $("#text-import-form").addEventListener("submit", importText);
+  $("#delete-all-sms").addEventListener("click", deleteAllSms);
   $("#sim-excel-file").addEventListener("change", event => {
     $("#excel-file-label").textContent = event.target.files[0]?.name || "Chọn hoặc kéo file Excel vào đây";
   });
@@ -201,6 +202,24 @@ async function loadMessages() {
     if (state.smsTab === "INBOX") renderRecentSms(messages.slice(0, 8));
   } catch (error) {
     $("#message-list").innerHTML = '<div class="empty">Không thể tải tin nhắn</div>';
+  }
+}
+
+async function deleteAllSms() {
+  const confirmed = window.confirm("Xóa vĩnh viễn toàn bộ tin nhắn đã lưu trong MongoDB?");
+  if (!confirmed) return;
+  const button = $("#delete-all-sms");
+  button.disabled = true;
+  button.textContent = "Đang xóa…";
+  try {
+    const result = await api(TOOL + "/sms", { method: "DELETE" });
+    await Promise.allSettled([loadMessages(), loadStats()]);
+    toast(result.message || `Đã xóa ${Number(result.deletedCount || 0)} tin nhắn`, "success");
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Xóa tất cả";
   }
 }
 

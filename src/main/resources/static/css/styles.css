@@ -56,6 +56,9 @@ button { cursor: pointer; }
 .button.secondary { color: var(--ink); background: white; border: 1px solid var(--line); }
 .button.light { color: var(--nav); background: #f4fff9; }
 .button.call-button { color: white; background: var(--coral); box-shadow: 0 8px 18px rgba(236,115,93,.2); }
+.button.danger { color: #a32d22; background: #fff1ef; border: 1px solid #f4c7c1; }
+.button.danger:hover { color: white; background: #c84638; }
+.button.compact { padding: 7px 10px; font-size: 11px; }
 .button.wide { width: 100%; }
 .icon-button { display: none; border: 0; background: transparent; font-size: 24px; }
 .page { display: none; padding: 30px 34px 48px; animation: enter .25s ease; }
@@ -186,6 +189,7 @@ textarea { resize: vertical; }
 .segmented { padding: 3px; border-radius: 10px; background: #eef2ee; display: flex; }
 .segmented button { border: 0; border-radius: 8px; padding: 7px 10px; color: var(--muted); background: transparent; font-size: 11px; }
 .segmented button.active { color: var(--ink); background: white; box-shadow: 0 2px 8px rgba(16,34,59,.08); font-weight: 700; }
+.message-actions { display: flex; align-items: center; gap: 9px; }
 .two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .switch-label { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; display: flex !important; align-items: center; justify-content: space-between; }
 .switch { display: inline-block; position: relative; }
@@ -250,6 +254,7 @@ textarea { resize: vertical; }
   .responsive { align-items: flex-start; flex-direction: column; }
   .segmented { width: 100%; }
   .segmented button { flex: 1; }
+  .message-actions { width: 100%; align-items: stretch; flex-direction: column; }
   .sim-row { grid-template-columns: 1fr auto; }
   .sim-row > span { display: none; }
 }

@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -69,6 +70,12 @@ public class ToolController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         return gsmToolService.listSms(direction, page, size);
+    }
+
+    @DeleteMapping("/sms")
+    public Map<String, Object> deleteAllSms() {
+        int deletedCount = gsmToolService.deleteAllSms();
+        return Map.of("deletedCount", deletedCount, "message", "Đã xóa toàn bộ tin nhắn");
     }
 
     @PostMapping("/sms/send")

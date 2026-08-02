@@ -10,11 +10,9 @@ import app.simsmartgsm.uitils.PortWorker;
 import app.simsmartgsm.entity.CallRecordEntity;
 import app.simsmartgsm.entity.Sim;
 import app.simsmartgsm.entity.SmsMessageEntity;
-import app.simsmartgsm.tool.model.SmsDocument;
-import app.simsmartgsm.tool.repository.ToolSmsRepository;
-import app.simsmartgsm.repository.CallRecordJpaRepository;
+import app.simsmartgsm.repository.DashboardCallRepository;
 import app.simsmartgsm.repository.SimRepository;
-import app.simsmartgsm.repository.SmsMessageJpaRepository;
+import app.simsmartgsm.repository.SmsHistoryRepository;
 import app.simsmartgsm.uitils.DeviceIdProvider;
 import app.simsmartgsm.uitils.SmsDecoder;
 import com.fazecast.jSerialComm.SerialPort;
@@ -62,8 +60,8 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class GsmService {
 
-    private final SmsMessageJpaRepository smsRepository;
-    private final CallRecordJpaRepository callRepository;
+    private final SmsHistoryRepository smsRepository;
+    private final DashboardCallRepository callRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final SimSyncService simSyncService;
     private final SimRepository simRepository;
@@ -71,8 +69,6 @@ public class GsmService {
     private final app.simsmartgsm.config.PortResolver portResolver;
     private final SimCleanupService simCleanupService;
     private final SmsDailyLimitService smsDailyLimitService;
-    private final ToolSmsRepository mongoSmsRepository;
-
     private final app.simsmartgsm.repository.CallMessageRepository callMessageRepository;
 
     @Value("${gsm.recording-path:./recordings}")
@@ -288,13 +284,13 @@ public class GsmService {
                 .phoneNumber(request.getPhoneNumber())
                 .content(request.getContent())
                 .type("SENT")
+                .direction("OUTBOUND")
                 .status("PENDING")
                 .isRead(true)
                 .build();
 
         sms = smsRepository.save(sms);
-        final Long smsId = sms.getId();
-        saveMongoOutbound(request, smsId, "PENDING", null, null);
+        final String smsId = sms.getId();
 
         try {
             // Tìm SIM theo comPort
@@ -305,7 +301,6 @@ public class GsmService {
                 sms.setType("OUTBOX");
                 sms.setErrorMessage("Không tìm thấy SIM");
                 sms = smsRepository.save(sms);
-                saveMongoOutbound(request, smsId, "FAILED", sms.getErrorMessage(), null);
                 messagingTemplate.convertAndSend("/topic/sms/status", sms);
                 return sms;
             }
@@ -320,7 +315,6 @@ public class GsmService {
                 sms.setType("OUTBOX");
                 sms.setErrorMessage("Không thể kết nối modem");
                 sms = smsRepository.save(sms);
-                saveMongoOutbound(request, smsId, "FAILED", sms.getErrorMessage(), sim.getPhoneNumber());
                 messagingTemplate.convertAndSend("/topic/sms/status", sms);
                 return sms;
             }
@@ -346,31 +340,8 @@ public class GsmService {
             sms.setType("OUTBOX");
             sms.setErrorMessage(e.getMessage());
             sms = smsRepository.save(sms);
-            saveMongoOutbound(request, smsId, "FAILED", sms.getErrorMessage(), null);
             messagingTemplate.convertAndSend("/topic/sms/status", sms);
             return sms;
-        }
-    }
-
-    private void saveMongoOutbound(SendSmsRequest request, Long smsId, String status,
-            String modemResponse, String simPhone) {
-        try {
-            String fingerprint = "outbound:" + smsId;
-            SmsDocument document = mongoSmsRepository.findByFingerprint(fingerprint)
-                    .orElseGet(() -> SmsDocument.builder()
-                            .fingerprint(fingerprint)
-                            .createdAt(Instant.now())
-                            .build());
-            document.setComPort(request.getComPort());
-            document.setSimPhone(simPhone);
-            document.setPhoneNumber(request.getPhoneNumber());
-            document.setDirection("OUTBOUND");
-            document.setContent(request.getContent());
-            document.setStatus(status);
-            document.setModemResponse(modemResponse);
-            mongoSmsRepository.save(document);
-        } catch (Exception e) {
-            log.error("Không thể lưu SMS gửi vào Mongo: {}", e.getMessage());
         }
     }
 
@@ -696,7 +667,6 @@ public class GsmService {
      * 
      * @return số lượng SMS đã được decode
      */
-    @org.springframework.transaction.annotation.Transactional
     public int decodeAllSmsInDatabase() {
         log.info("🔄 Starting SMS decoding migration...");
         int decodedCount = 0;
@@ -755,7 +725,7 @@ public class GsmService {
         return decodedCount;
     }
 
-    public void markAsRead(Long id) {
+    public void markAsRead(String id) {
         smsRepository.findById(id).ifPresent(sms -> {
             sms.setRead(true);
             smsRepository.save(sms);
@@ -763,9 +733,11 @@ public class GsmService {
     }
 
     /** Đánh dấu tất cả tin nhắn INBOX là đã đọc */
-    @org.springframework.transaction.annotation.Transactional
     public int markAllAsRead() {
-        int count = smsRepository.markAllAsReadByType("INBOX");
+        List<SmsMessageEntity> unread = smsRepository.findByTypeAndIsReadFalseOrderByCreatedAtDesc("INBOX");
+        unread.forEach(message -> message.setRead(true));
+        smsRepository.saveAll(unread);
+        int count = unread.size();
         log.info("✅ Marked {} messages as read", count);
         // Push updated unread count
         messagingTemplate.convertAndSend("/topic/sms/unread-count", 0);
@@ -773,7 +745,6 @@ public class GsmService {
     }
 
     /** 🗑️ Xóa toàn bộ tin nhắn local trong database */
-    @org.springframework.transaction.annotation.Transactional
     public int deleteAllSmsMessages() {
         try {
             long totalCount = smsRepository.count();
@@ -796,7 +767,7 @@ public class GsmService {
         }
     }
 
-    public SmsMessageEntity resendSms(Long id) {
+    public SmsMessageEntity resendSms(String id) {
         SmsMessageEntity original = smsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tin nhắn"));
 
@@ -812,7 +783,7 @@ public class GsmService {
         return sendSms(request);
     }
 
-    public void deleteSms(Long id) {
+    public void deleteSms(String id) {
         smsRepository.deleteById(id);
     }
 
@@ -838,7 +809,7 @@ public class GsmService {
 
         call = callRepository.save(call);
 
-        final Long callId = call.getId();
+        final String callId = call.getId();
 
         // Execute call in background
         String finalSimPhone = (request.getSimPhone() != null) ? request.getSimPhone() : "UNKNOWN";
@@ -873,7 +844,7 @@ public class GsmService {
                 .build();
 
         call = callRepository.save(call);
-        final Long callId = call.getId();
+        final String callId = call.getId();
 
         // Execute in background
         executor.submit(() -> {
@@ -1130,7 +1101,7 @@ public class GsmService {
 
         call = callRepository.save(call);
 
-        final Long callId = call.getId();
+        final String callId = call.getId();
 
         // Execute in background
         String finalSimPhone = (request.getSimPhone() != null) ? request.getSimPhone() : "UNKNOWN";
@@ -1145,7 +1116,7 @@ public class GsmService {
     /**
      * ✅ Execute answer call logic
      */
-    private void executeAnswerCall(Long callId, String comPort, String expectedCaller,
+    private void executeAnswerCall(String callId, String comPort, String expectedCaller,
             int waitTimeout, int callDuration, boolean shouldRecord, boolean acceptHidden,
             String simPhone, String serviceCode, String orderId) {
         try {
@@ -1234,7 +1205,7 @@ public class GsmService {
         }
     }
 
-    private void executeCall(Long callId, String comPort, String targetPhone,
+    private void executeCall(String callId, String comPort, String targetPhone,
             int callDuration, boolean shouldRecord, String simPhone,
             String serviceCode, String orderId) {
         SerialPort port = null;
@@ -2861,12 +2832,12 @@ public class GsmService {
                 phoneNumber, phoneNumber, pageable);
     }
 
-    public CallRecordEntity getCallById(Long id) {
+    public CallRecordEntity getCallById(String id) {
         return callRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy cuộc gọi"));
     }
 
-    private void updateCallStatus(Long callId, String status, String error) {
+    private void updateCallStatus(String callId, String status, String error) {
         callRepository.findById(callId).ifPresent(call -> {
             call.setStatus(status);
             if (error != null) {
@@ -2877,14 +2848,14 @@ public class GsmService {
         });
     }
 
-    private void updateCallStartTime(Long callId) {
+    private void updateCallStartTime(String callId) {
         callRepository.findById(callId).ifPresent(call -> {
             call.setCallStartTime(LocalDateTime.now());
             callRepository.save(call);
         });
     }
 
-    private void updateCallEndTime(Long callId, int duration) {
+    private void updateCallEndTime(String callId, int duration) {
         callRepository.findById(callId).ifPresent(call -> {
             call.setCallEndTime(LocalDateTime.now());
             call.setActualDuration(duration);
@@ -2892,7 +2863,7 @@ public class GsmService {
         });
     }
 
-    private void updateCallRecordingPath(Long callId, String path) {
+    private void updateCallRecordingPath(String callId, String path) {
         callRepository.findById(callId).ifPresent(call -> {
             call.setRecordingPath(path);
             callRepository.save(call);
@@ -3222,6 +3193,7 @@ public class GsmService {
                             .phoneNumber(decodeUCS2(sender))
                             .content(decodeUCS2(content))
                             .type("INBOX")
+                            .direction("INBOUND")
                             .status("RECEIVED")
                             .isRead(false)
                             .build();
@@ -3344,7 +3316,7 @@ public class GsmService {
                 return;
             }
 
-            // Save to local DB
+            // Save call result to MongoDB
             if (callMessageRepository != null) {
                 String status = failReason != null ? "FAILED" : (connected ? "SUCCESS" : "NO_ANSWER");
 

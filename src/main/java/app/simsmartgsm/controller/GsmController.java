@@ -230,7 +230,7 @@ public class GsmController {
 
     @PutMapping("/sms/{id}/read")
     @Operation(summary = "Đánh dấu đã đọc", description = "Đánh dấu tin nhắn đã đọc")
-    public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable String id) {
         try {
             gsmService.markAsRead(id);
             return ResponseEntity.ok(ApiResponse.success("Đã đánh dấu đọc", null));
@@ -273,7 +273,7 @@ public class GsmController {
 
     @PostMapping("/sms/{id}/resend")
     @Operation(summary = "Gửi lại tin lỗi", description = "Gửi lại tin nhắn thất bại")
-    public ResponseEntity<ApiResponse<SmsMessageEntity>> resendSms(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<SmsMessageEntity>> resendSms(@PathVariable String id) {
         try {
             SmsMessageEntity result = gsmService.resendSms(id);
             return ResponseEntity.ok(ApiResponse.success("Đã gửi lại", result));
@@ -285,7 +285,7 @@ public class GsmController {
 
     @DeleteMapping("/sms/{id}")
     @Operation(summary = "Xóa tin nhắn", description = "Xóa tin nhắn khỏi database")
-    public ResponseEntity<ApiResponse<Void>> deleteSms(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteSms(@PathVariable String id) {
         try {
             gsmService.deleteSms(id);
             return ResponseEntity.ok(ApiResponse.success("Đã xóa", null));
@@ -296,7 +296,7 @@ public class GsmController {
     }
 
     @DeleteMapping("/sms/delete-all")
-    @Operation(summary = "Xóa toàn bộ tin nhắn local", description = "⚠️ Xóa tất cả tin nhắn trong database local (không thể hoàn tác)")
+    @Operation(summary = "Xóa toàn bộ tin nhắn", description = "Xóa tất cả tin nhắn trong MongoDB (không thể hoàn tác)")
     public ResponseEntity<ApiResponse<Map<String, Object>>> deleteAllSmsMessages() {
         try {
             log.warn("🗑️ API called: DELETE ALL SMS MESSAGES");
@@ -433,7 +433,7 @@ public class GsmController {
 
     @GetMapping("/call/{id}")
     @Operation(summary = "Chi tiết cuộc gọi", description = "Xem chi tiết 1 cuộc gọi")
-    public ResponseEntity<ApiResponse<CallRecordEntity>> getCallDetail(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<CallRecordEntity>> getCallDetail(@PathVariable String id) {
         try {
             CallRecordEntity call = gsmService.getCallById(id);
             return ResponseEntity.ok(ApiResponse.success(call));

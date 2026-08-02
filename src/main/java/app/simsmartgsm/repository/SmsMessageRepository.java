@@ -6,7 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface SmsMessageRepository extends MongoRepository<SmsMessage, Long> {
+public interface SmsMessageRepository extends MongoRepository<SmsMessage, String> {
 
 
     Page<SmsMessage> findByToNumberContainingIgnoreCase(String toNumber, Pageable pageable);
