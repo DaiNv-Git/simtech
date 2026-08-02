@@ -104,9 +104,10 @@ echo "  -> JDK extracted and bundled"
 
 # Copy start scripts
 cp "${PROJECT_DIR}/start.bat" "${DIST_ROOT}/"
+cp "${PROJECT_DIR}/start-with-logs.bat" "${DIST_ROOT}/"
 cp "${PROJECT_DIR}/Tao_Icon_Desktop.bat" "${DIST_ROOT}/"
 cp "${PROJECT_DIR}/HUONG_DAN_CAI_DAT.txt" "${DIST_ROOT}/"
-echo "  -> Copied start scripts, shortcut script and instructions"
+echo "  -> Copied start scripts (including logging), shortcut script and instructions"
 
 # Create empty directories
 mkdir -p "${DIST_ROOT}/logs"
@@ -147,6 +148,7 @@ echo "  1. Copy the ZIP to the Windows machine"
 echo "  2. Extract the ZIP"
 echo "  3. Double-click 'simTech.exe' to run"
 echo "     (or 'start.bat' as backup)"
+echo "     Use 'start-with-logs.bat' when diagnostic logs are needed"
 echo "  4. Optionally run 'Tao_Icon_Desktop.bat' to create a Home Screen shortcut."
 echo ""
 echo "  No Java installation required!"

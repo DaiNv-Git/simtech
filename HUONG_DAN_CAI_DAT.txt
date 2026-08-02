@@ -13,6 +13,11 @@ Cách 1: Sử dụng luôn phần mềm
 - Nháy đúp vào file "SimSmartGSM.exe" để chạy ứng dụng trực tiếp. 
 (Nếu file exe gặp lỗi hiếm trên máy cũ, bạn có thể chạy file "start.bat" thay thế).
 
+Nếu cần lưu log để kiểm tra lỗi:
+- Nháy đúp vào file "start-with-logs.bat".
+- Mỗi lần chạy sẽ tạo một file riêng trong thư mục "logs".
+- Khi cần hỗ trợ, gửi file "logs\simtech_yyyyMMdd_HHmmss.log" mới nhất.
+
 Cách 2: Đưa icon ra ngoài màn hình chính (Desktop)
 - Nháy đúp vào file "Tao_Icon_Desktop.bat".
 - Lúc này ngoài màn hình nền của bạn sẽ xuất hiện 1 biểu tượng tên là "SimSmart GSM".
