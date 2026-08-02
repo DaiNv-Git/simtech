@@ -1,0 +1,39 @@
+======================================================
+HƯỚNG DẪN CÀI ĐẶT VÀ SỬ DỤNG - SIMSMART GSM GATEWAY
+======================================================
+
+QUAN TRỌNG: 
+1. KHÔNG nhấn đúp chạy trực tiếp phần mềm khi vẫn đang xem bên trong file nén (.zip).
+2. Bạn BẮT BUỘC phải Bấm chuột phải vào file nén .zip -> Chọn "Extract All..." (hoặc "Giải nén ra đây") để đưa nguyên thư mục này ra máy tính.
+
+SAU KHI GIẢI NÉN XONG, BẠN LÀM NHƯ SAU:
+------------------------------------------------------
+Cách 1: Sử dụng luôn phần mềm
+- Vào thư mục vừa giải nén.
+- Nháy đúp vào file "SimSmartGSM.exe" để chạy ứng dụng trực tiếp. 
+(Nếu file exe gặp lỗi hiếm trên máy cũ, bạn có thể chạy file "start.bat" thay thế).
+
+Cách 2: Đưa icon ra ngoài màn hình chính (Desktop)
+- Nháy đúp vào file "Tao_Icon_Desktop.bat".
+- Lúc này ngoài màn hình nền của bạn sẽ xuất hiện 1 biểu tượng tên là "SimSmart GSM".
+- Từ các lần sau, bạn chỉ cần ra ngoài màn hình chính và nhấn vào biểu tượng đó để mở ứng dụng, y hệt như cài đặt một phần mềm mặc định.
+
+
+LƯU Ý QUAN TRỌNG VỀ BẢO MẬT WINDOWS (MÀN HÌNH XANH):
+------------------------------------------------------
+Nếu khi nháy đúp vào `SimSmartGSM.exe` mà máy tính hiện ra một bảng thông báo màn hình xanh có chữ "Windows protected your PC" (Microsoft Defender SmartScreen):
+
+Đừng lo lắng! Đây là cơ chế tự vệ mặc định của Windows đối với các phần mềm mới tải từ Internet chưa có chứng chỉ số (Code Signing Certificate) đắt tiền của các tập đoàn lớn.
+
+Cách chạy phần mềm:
+1. Bạn hãy nhấn vào chữ "More info" (Thông tin thêm) ở dòng cuối đoạn chữ.
+2. Lúc này sẽ xuất hiện thêm một nút "Run anyway" (Vẫn chạy). 
+3. Hãy nhấn vào "Run anyway" để khởi động. Hệ thống sẽ nhớ lựa chọn này cho các lần sau.
+
+CÁC LƯU Ý KHÁC:
+------------------------------------------------------
+- Phiên bản này ĐÃ TÍCH HỢP SẴN MÔI TRƯỜNG tự động nên đảm bảo chạy mượt mà trên 100% các máy tính chạy Windows 8, Windows 10, Windows 11.
+- Bạn KHÔNG CẦN phải cài đặt thêm Java (JDK/JRE) hay bất cứ phần mềm phụ trợ nào dính dáng đến môi trường Code.
+- Vui lòng tuyệt đối không đổi tên thư mục con "jdk" hay file "simsmart-gsm.jar" vì phần mềm exe cần gọi nó để hoạt động độc lập.
+
+Chúc bạn sử dụng phần mềm hiệu quả!

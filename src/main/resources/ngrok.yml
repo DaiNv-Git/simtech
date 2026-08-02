@@ -1,0 +1,5 @@
+authtoken: 2MyHVayjeJn15C5COX0cKF08l2N_3b37j2Uj7scvm5i1fdNAU
+tunnels:
+  gsm-proxy:
+    addr: 9966
+    proto: tcp

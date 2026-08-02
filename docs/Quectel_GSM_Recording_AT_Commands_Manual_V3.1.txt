@@ -1,0 +1,385 @@
+                                                                        
+ 
+ 
+ GSM  Recording  
+ AT Command Manual  
+GSM /GPRS  Module Series  
+Rev. GSM_ Recording _AT_Commands_Manual _V3.1 
+ Date: 2015-05-08 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+www.quectel.com  
+ 
+ 
+
+                                                                       GSM/GPRS ModuleSeries 
+                                                     GSM Recording AT Commands Manual  
+GSM_Recording_ AT_Commands_Manual            Confidential / Released             1 / 12 
+ 
+ 
+ Our aim is to provide customers with timely and comprehensive service. For any 
+assistance, please contact our company headquarters:  
+ 
+Quectel Wireless Solutions Co., Ltd.  
+Office 501, Building 13, No.99, Tianzhou Road, Shanghai, China, 200233 
+Tel: +86 21 5108 6236 
+Mail: info@quectel.com  
+ 
+Or our local office, for more information, please visit:  
+http://www.quectel.com/support/salesupport.aspx 
+ 
+ 
+For technical support, to report documentation errors, please visit:  
+http://www.quectel.com/support/techsupport.aspx 
+Or Email: Support@quectel.com 
+ 
+ 
+GENERAL NOTES 
+QUECTEL OFFERS THIS INFORMATION AS A SERVICE TO ITS CUSTOMERS. THE INFORMATION 
+PROVIDED IS BASED UPON CUSTOMERS’ REQUIREMENTS. QUECTEL MAKES EVERY EFFORT 
+TO ENSURE THE QUALITY OF THE INFORMATION IT MAKES AVAILABLE. QUECTEL DOES NOT 
+MAKE ANY WARRANTY AS TO THE INFORMATION CONTAINED HEREIN, AND DOES NOT ACCEPT 
+ANY LIABILITY FOR ANY INJURY, LOSS OR DAMAGE OF ANY KIND INCURRED BY USE OF OR 
+RELIANCE UPON THE INFORMATION. ALL INFORMATION SUPPLIED HEREIN IS SUBJECT TO 
+CHANGE WITHOUT PRIOR NOTICE.  
+ 
+ 
+COPYRIGHT 
+THIS INFORMATION CONTAINED HERE IS PROPRIETARY TECHNICAL INFORMATION OF 
+QUECTEL CO., LTD. TRANSMITTABLE, REPRODUCTION, DISSEMINATION AND EDITING OF THIS 
+DOCUMENT AS WELL AS UTILIZATION OF THIS CONTENTS ARE FORBIDDEN WITHOUT 
+PERMISSION. OFFENDERS WILL BE HELD LIABLE FOR PAYMENT OF DAMAGES. ALL RIGHTS 
+ARE RESERVED IN THE EVENT OF A PATENT GRANT OR REGISTRATION OF A UTILITY MODEL 
+OR DESIGN.  
+ 
+Copyright © Quectel Wireless Solutions Co., Ltd. 2015. All rights reserved.  
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             2 / 12 
+ 
+ 
+ About the Document 
+  
+History  
+Revision   Date  Author  Description  
+3.0 2012 -12-04 Derrick DAI  Initial  
+3.1 2015 -05-08 Derrick DAI  Added applicable modules  
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             3 / 12 
+ 
+ 
+ Contents  
+About the Document ................................................................................................................................... 2  
+Contents .......................................................................................................................................................  3 
+Table Index ...................................................................................................................................................  4 
+1 Introduction .......................................................................................................................................... 5  
+2 Description ........................................................................................................................................... 6  
+2.1. AT Command Syntax ..................................................................................................................  6 
+2.2. Description of AT Command ....................................................................................................... 6  
+2.2.1.  AT+QAUDRD  Record Media File ..................................................................................  6 
+2.2.2.  AT+QAUDPLAY  Play Media File ...................................................................................  7 
+2.2.3.  AT+QAUDSTOP  Stop Playing Media File ..................................................................... 8  
+2.3. Supported Recording Format ..................................................................................................... 9  
+2.4. URC Report ................................................................................................................................ . 9 
+3 Appendix A Reference .......................................................................................................................  11 
+4 Appendix B Summary of CME ERR- OR Codes .............................................................................  12 
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             4 / 12 
+ 
+ 
+ Table Index 
+TABLE 1: RECORDING FORMAT .......................................................................................................................  9 
+TABLE 2: +QAUDRIND CODE ..........................................................................................................................  10 
+TABLE 3: +QAUDPIND CODE ..........................................................................................................................  10 
+TABLE 4: RELATED DOCUMENTS ...................................................................................................................  11 
+TABLE 5: TERMS AND ABBREVIATIONS ......................................................................................................... 11 
+TABLE 6: DESCRIPTION OF DIFFERENT CODING SCHEMES .................................................................... 12 
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             5 / 12 
+ 
+ 
+ 1  Introduction  
+ 
+This document presents the AT command set for recording function of Quectel modules, including the 
+format of related AT commands, and the examples of how you can use them. 
+ 
+This document is applicable to Quectel M10, M66, M85, M80, M72 and M95 modules. 
+ 
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             6 / 12 
+ 
+ 
+ 2  Description 
+ 
+2.1. AT Command Syntax  
+ 
+Test Command  AT+<x>=? This command returns the list of parameters and value ranges 
+set by the corresponding Write Command or internal processes.  
+Read Command  AT+<x>? This command returns the currently set value of the parameter 
+or parameters.  
+Write Command  AT+<x>=<…>  This command sets the user -definable parameter values.  
+Execution 
+Command  AT+<x>  This command reads non -variable parameters affected by 
+internal pro cesses in the GSM engine  
+ 
+2.2. Description of AT Command  
+ 
+2.2.1. AT+QAUDRD  Record Media File  
+ 
+ AT+Q AUDRD  Record Media File  
+Test Command  
+AT+Q AUDRD =? Response  
++QAUDRD: (0,1),"filename"[,format]  
+ 
+OK 
+Read  Command  
+AT+QAUDRD ? Response  
++QAUDRD: <state>  
+ 
+OK 
+Write Command  
+AT+QAUDRD= <control >[,"filename"[,
+<format >]] Response  
+OK 
+Reference  Audio channel is decided by AT command: AT+QAUDCH  
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             7 / 12 
+ 
+ 
+ Parameter 
+ 
+ 
+1. “filename ” consists of  file path, file name and file suffix. Path name could  be one of directories of UFS, 
+RAM  or SD card. For example, “Example.wav”, “RAM:Example.wav”, “SD: Example.wav” and 
+“SD:Directory \\ Example.wav”. File suffix can be “wav” or “amr” when the <format> is o mitted. For 
+“amr” suffix, file is stored by AMR coding format. For “wav” suffix, file is stored by WAV_ADPCM 
+coding format when the module is on calling, stored by WAV_PCM16 coding format when the module 
+is idle.  
+2. When the file suffix is “amr”, the format c an only be “3” (AMR). When the file suffix is “wav”, the format 
+can be “13” (WAV_PCM16), “14”(WAV_ALAW), “15”(WAV_ULAW), “16”(WAV_ADPCM). Format must 
+be formulated with other file suffix.  Please refer to Table 1: Recording Format . 
+3. If the recording file’s n ame and format is same with an existed file. Recording data will be appended to 
+the end of the file.  
+4. Record media file to SD subdirectory, you need to create the subdirectory manually first.  
+ 
+2.2.2. AT+QAUDPLAY  Play Media File  <state >       Recording state  
+0   Module is not in recording  
+1   Module is in recording  
+“filename ”    Name of the file  to record, refer to Note 1  
+<format >   Format of the file, refer to Note 2  
+              3   AMR  
+               13  WAV_PCM16  
+              14  WAV_ALAW  
+              15  WAV_ULAW  
+              16  WAV_ADPCM  
+AT+Q AUDPLAY   Play Media File  
+Test Command   
+AT+QAUDPLAY=?  Response  
++QAUDPLAY:  “filename”,(0 -1),(0-100), [(0-2)] 
+ 
+OK 
+Write Command  
+AT+QAUDPLAY=  
+“filename”, 
+<repeat>,<volume>, [<channel
+>] Response  
+OK 
+Reference  If the <channel> parameter is omitted, channel is decided by AT 
+command: AT+QAUDCH  NOTE S 
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             8 / 12 
+ 
+ 
+ Parameter 
+ 
+2.2.3. AT+QAUDSTOP  Stop Playing Media F ile 
+Example  
+AT+QAUDRD=1,"A.amr",3             //  Record a media file in AMR format.  
+OK                                     Store it in UFS , named as ”A” 
+AT+QAUDRD=0                      //  Stop the recording.  
+OK                                  
+AT+QAUDRD=1,"SD:B.wav"           //  Record a media file in  WAV_PCM16 format, stored it in  
+OK                                    SD root directory, Named as “B”. 
+AT+QAUDRD=0                      //  Stop the recording 
+OK 
+ 
+// Create a subdirectory named as “picture” before recording  
+AT+QAUDRD=1,"SD:picture\\C.wav"    //  Record a media file, and stored it in SD subdirectory,  
+OK                                     Named as “C”. 
+AT+QAUDRD=0                      //  Stop the recording 
+OK 
+AT+QAUDPLAY="A.amr",0,100,1      //  Play the “A” media file, not repeat, volume 100, through  
+OK                                     Headset. 
+ 
++QAUDPIND: 0,5                     //  After playing is finished, URC report is output “filename ”    Name of the file  to play, including file path, file name and file suffix. File suffix can be 
+AMR,WAV or MP3  
+<repeat >  Whether or not to play media file repeat edly 
+             0   Play only one time  
+             1   Play repeatedly  
+<volume >  Volume to play media file  
+ 0-100 
+<channel>     Channel to play media file  
+             0   Receiver  
+             1   Headset  
+             2   Loud Speaker  
+AT+Q AUDSTOP  Stop Playing Media File  
+Test Command  
+AT+QAUD STOP =? Response  
+OK 
+Execution  Command  
+AT+QAUD STOP  Response  
+OK 
+Reference   
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             9 / 12 
+ 
+ 
+ AT+QAUDPLAY="SD: B.wav",0,100,1   //  Play the “B” media file, not repeat, volume 100,  
+OK                                     through Headset. 
+ 
++QAUDPIND: 0,5                     //  After playing is finished, URC report is output  
+AT+QAUDPLAY="SD: picture\\C.wav",1,80,1      
+OK                                  //  Play the “C” media file, repeat, volume 80,  
+through Headset.  
+AT+QAUDSTOP                      //  Stop the playing 
+OK 
+ 
+2.3. Supported Recording Format 
+Table 1: Recording Format 
+Format  Encoding  Sampling 
+Rate  Sampling  
+Resolution  Encoding 
+Digit  Encode 
+Speed  File Size 
+3 AMR   16 bit    40KB/min  
+13 WAV_PCM16  8HZ 16 bit  16 bit  128kbps  960KB/min  
+14 WAV_ALAW  8HZ 16 bit  8 bit 64kbps  480KB/min  
+15 WAV_ULAW  8HZ 16 bit  8 bit 64kbps  480KB/min  
+16 WAV_ADPCM  8HZ 16 bit  4 bit 32kbps  240KB/min  
+ 
+2.4. URC Report 
+ 
+The recording would be forced to quit in the following cases. 
+ 
+1. Start to record when module is on idle. The recording would be forced to quit when making a call or 
+answer a call.  
+2. Start to record when module is on a call. The recording would be forced to quit when the call is 
+hanged up. 
+3. When the recording is forced to quit, URC: +QAUDRIND: 0,<code> would be output through UART. 
+ 
+ 
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             10 / 12 
+ 
+ 
+ Table 2: +QAUDRIND Code 
+<code>  Meaning  
+0 Reserved  
+1 Unknown error  
+3 Disc is full  
+6 Ended by other audio task  
+10 Not found the disc  
+ 
+When the playing is finished or ended by other audio tasks, URC:  +QAUDPIND: 0,<code> would be 
+output through UART. 
+Table 3: +QAUDPIND Code 
+<code>  Meaning  
+5 Playing is finished  
+6 Ended by other audio tasks  
+9 Unknown error  
+ 
+  
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             11 / 12 
+ 
+ 
+ 3  Appendix A Reference  
+ 
+Table 4: Related Documents 
+SN Document name  Remark  
+[1] Mxx_ATC .pdf Mxx AT Command Set  
+ 
+Table 5 : Terms and Abbreviations 
+Abbreviation  Description  
+UFS User File System  
+ 
+  
+Quectel 
+Confidential
+
+                                                                       GSM/GPRS Module Series 
+                                                     GSM Recording AT Commands Manual  
+ 
+GSM_Recording_AT_Commands_Manual            Confidential / Released             12 / 12 
+ 
+ 
+ 4  Appendix B Summary of CME ERR-
+ OR Codes 
+Table 6 : Description of Different Coding Schemes 
+ Code of <err>  Meaning  
+4300  Wrong format  
+4302  Audio task busy  
+4303  Create file failed  
+4304  Additional recording in a different format  
+4305  Disc full  
+4306  Write protection on file  
+4499  Unknown error  
+Quectel 
+Confidential
+
