@@ -11,6 +11,7 @@ import app.simsmartgsm.uitils.SmsDecoder;
 import app.simsmartgsm.tool.model.SmsDocument;
 import app.simsmartgsm.tool.repository.ToolSmsRepository;
 import app.simsmartgsm.tool.service.TelegramService;
+import app.simsmartgsm.tool.service.WebhookService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class GsmListenerService {
     private final ComManager comManager;
     private final CallRecordService callRecordService;
     private final TelegramService telegramService;
+    private final WebhookService webhookService;
     private final ToolSmsRepository mongoSmsRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final SimRepository simRepository;
@@ -155,6 +157,7 @@ public class GsmListenerService {
             // dùng bản H2 ở trên để giữ nguyên tương thích.
             saveMongoSms(sim, decodedSender, decodedBody, "INBOUND", "RECEIVED", null);
             telegramService.sendIncomingSms(sim.getComName(), sim.getPhoneNumber(), decodedSender, decodedBody);
+            webhookService.sendIncomingSms(sim.getComName(), sim.getPhoneNumber(), decodedSender, decodedBody);
 
         } catch (Exception e) {
             log.error("❌ [{}] processSms error: {}", sim.getComName(), e.getMessage(), e);

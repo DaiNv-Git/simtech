@@ -1,11 +1,13 @@
 package app.simsmartgsm.tool.controller;
 
 import app.simsmartgsm.tool.dto.SendSmsRequest;
+import app.simsmartgsm.tool.dto.WebhookSettingsRequest;
 import app.simsmartgsm.entity.Sim;
 import app.simsmartgsm.entity.SmsMessageEntity;
 import app.simsmartgsm.tool.model.SmsDocument;
 import app.simsmartgsm.tool.service.GsmToolService;
 import app.simsmartgsm.tool.service.TelegramService;
+import app.simsmartgsm.tool.service.WebhookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -26,6 +29,7 @@ import java.util.Map;
 public class ToolController {
     private final GsmToolService gsmToolService;
     private final TelegramService telegramService;
+    private final WebhookService webhookService;
 
     @GetMapping("/sims")
     public List<Sim> sims() {
@@ -63,5 +67,26 @@ public class ToolController {
         }
         telegramService.sendMessage("✅ simTech đã kết nối Telegram thành công.");
         return ResponseEntity.ok(Map.of("message", "Đã gửi tin nhắn thử"));
+    }
+
+    @GetMapping("/settings/webhook")
+    public Map<String, Object> webhookSettings() {
+        return webhookService.getPublicSettings();
+    }
+
+    @PutMapping("/settings/webhook")
+    public Map<String, Object> updateWebhookSettings(
+            @Valid @RequestBody WebhookSettingsRequest request) {
+        return webhookService.update(request);
+    }
+
+    @PostMapping("/settings/webhook/test")
+    public ResponseEntity<Map<String, String>> webhookTest() {
+        try {
+            webhookService.sendTest();
+            return ResponseEntity.ok(Map.of("message", "Webhook phản hồi thành công"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 }

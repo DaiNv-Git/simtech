@@ -1,11 +1,12 @@
 # simTech
 
-Ứng dụng desktop quản lý thiết bị GSM, giữ nguyên dashboard và chức năng gọi điện. Phần tích hợp `sms-global-hub` đã được loại bỏ; SMS nhận được lưu vào MongoDB và chuyển tiếp tới Telegram, đồng thời ứng dụng vẫn hỗ trợ gửi SMS qua modem.
+Ứng dụng desktop quản lý thiết bị GSM với dashboard mới, chức năng gửi/nhận SMS và gọi điện. Phần tích hợp `sms-global-hub` đã được loại bỏ; SMS nhận được lưu vào MongoDB và chuyển tiếp song song tới Telegram cùng webhook của khách hàng.
 
 Ứng dụng dùng cùng máy chủ MongoDB hiện có nhưng tách riêng database `simtech`. Hai collection chính:
 
 - `sims`: số SIM, cổng COM, nhà mạng, ICCID, IMSI và trạng thái.
 - `sms`: lịch sử tin nhận/gửi, trạng thái và phản hồi modem.
+- `settings`: cấu hình webhook khách hàng, bearer token và signing secret.
 
 ## Cấu hình
 
@@ -34,6 +35,17 @@ Kiểm tra trạng thái cấu hình:
 curl http://localhost:8080/api/tool/telegram/status
 ```
 
+## Webhook khách hàng
+
+Cấu hình trực tiếp tại tab **Settings** trên dashboard. Webhook nhận HTTP
+`POST` với event `sms.received`. Nếu có signing secret, ứng dụng thêm header
+`X-SimTech-Signature: sha256=<HMAC>`; nếu có bearer token, ứng dụng thêm header
+`Authorization: Bearer <token>`.
+
+- `GET /api/tool/settings/webhook`: đọc trạng thái cấu hình đã được che bí mật.
+- `PUT /api/tool/settings/webhook`: lưu cấu hình.
+- `POST /api/tool/settings/webhook/test`: gửi payload kiểm tra.
+
 ## API chính
 
 - `GET /api/tool/sims`: danh sách SIM trong MongoDB.
@@ -41,4 +53,4 @@ curl http://localhost:8080/api/tool/telegram/status
 - `GET /api/tool/sms`: lịch sử SMS.
 - `POST /api/tool/sms/send`: gửi SMS với JSON `comPort`, `toNumber`, `message`.
 
-Việc quét SIM và thao tác modem dùng chung scanner/PortWorker của dashboard để không tranh chấp cổng COM với chức năng gọi điện. SMS nhận được lưu vào collection `sms` rồi gửi Telegram khi cấu hình hợp lệ.
+Việc quét SIM và thao tác modem dùng chung scanner/PortWorker của dashboard để không tranh chấp cổng COM với chức năng gọi điện. Khi nhận SMS, Telegram và webhook được gọi độc lập nên một kênh lỗi không làm chặn kênh còn lại.

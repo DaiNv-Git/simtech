@@ -1,1055 +1,177 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="GSM Smart App - Quản lý SIM, SMS và Cuộc gọi">
-  <title>GSM Smart App - Quản lý SIM</title>
-  <link rel="icon" type="image/x-icon" href="./images/app-icon.ico">
+  <meta name="description" content="simTech — Trung tâm điều hành SIM, SMS và cuộc gọi">
+  <title>simTech Control Desk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/styles.css?v=2.2">
-  <script src="./js/i18n.js" defer></script>
-  <!-- Removed onbeforeunload - users can close window normally -->
-
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/styles.css?v=3.0">
 </head>
-
 <body>
-  <div id="app">
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div class="logo">
-          <div class="logo-icon border-gradient-glass">
-            <img src="./images/logo.png" alt="GSM Smart Logo"
-              style="width: 32px; height: 32px; border-radius: 6px; object-fit: contain; box-shadow: 0 0 10px rgba(131, 140, 237, 0.4); background-color: var(--bg-card);">
-          </div>
-          <span class="logo-text">GSM Smart</span>
-        </div>
+  <div class="app-shell">
+    <aside class="rail">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div><strong>simTech</strong><span>Control desk</span></div>
       </div>
 
-      <nav class="sidebar-nav">
-        <a href="#" class="nav-item active" data-page="dashboard">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="9"></rect>
-              <rect x="14" y="3" width="7" height="5"></rect>
-              <rect x="14" y="12" width="7" height="9"></rect>
-              <rect x="3" y="16" width="7" height="5"></rect>
-            </svg>
-          </span>
-          <span class="nav-text" data-i18n="nav.dashboard">Tổng Quan</span>
-        </a>
-
-        <a href="#" class="nav-item" data-page="scan-sim">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-              <rect x="9" y="9" width="6" height="6"></rect>
-              <line x1="9" y1="1" x2="9" y2="4"></line>
-              <line x1="15" y1="1" x2="15" y2="4"></line>
-              <line x1="9" y1="20" x2="9" y2="23"></line>
-              <line x1="15" y1="20" x2="15" y2="23"></line>
-              <line x1="20" y1="9" x2="23" y2="9"></line>
-              <line x1="20" y1="14" x2="23" y2="14"></line>
-              <line x1="1" y1="9" x2="4" y2="9"></line>
-              <line x1="1" y1="14" x2="4" y2="14"></line>
-            </svg>
-          </span>
-          <span class="nav-text" data-i18n="nav.scanSim">Thiết Bị</span>
-        </a>
-
-        <a href="#" class="nav-item" data-page="messages">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-            </svg>
-          </span>
-          <span class="nav-text" data-i18n="nav.messages">Tin Nhắn SMS</span>
-          <span class="nav-badge" id="unread-badge">0</span>
-        </a>
-
-        <a href="#" class="nav-item" data-page="calls">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-            </svg>
-          </span>
-          <span class="nav-text" data-i18n="nav.calls">Lịch Sử Gọi</span>
-        </a>
-
-        <a href="#" class="nav-item" data-page="proxy">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 12s2.545-5 7-5c4.454 0 7 5 7 5s-2.546 5-7 5c-4.455 0-7-5-7-5z"></path>
-              <path d="M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path>
-              <path d="M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"></path>
-              <path d="M21 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"></path>
-            </svg>
-          </span>
-          <span class="nav-text">Mạng Proxy</span>
-          <span class="nav-badge" id="proxy-badge" style="display:none">0</span>
-        </a>
-
-        <a href="#" class="nav-item" data-page="fail-tracking">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-          </span>
-          <span class="nav-text">Cảnh Báo Lỗi</span>
-        </a>
-
-        <a href="#" class="nav-item" data-page="sim-health">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-            </svg>
-          </span>
-          <span class="nav-text">SIM Health</span>
-          <span class="nav-badge" id="dead-sim-badge" style="display:none; background: var(--danger);">0</span>
-        </a>
-
+      <nav class="main-nav" aria-label="Điều hướng chính">
+        <button class="nav-link active" data-page="overview"><span>◫</span><b>Tổng quan</b></button>
+        <button class="nav-link" data-page="devices"><span>▤</span><b>Thiết bị</b></button>
+        <button class="nav-link" data-page="messages"><span>✉</span><b>Tin nhắn</b><i id="nav-unread">0</i></button>
+        <button class="nav-link" data-page="calls"><span>☎</span><b>Cuộc gọi</b></button>
+        <button class="nav-link" data-page="settings"><span>⚙</span><b>Settings</b></button>
       </nav>
 
-      <div class="sidebar-footer">
-        <div class="connection-status" id="connection-status">
-          <span class="status-dot offline"></span>
-          <span class="status-text" data-i18n="toasts.connecting">Đang kết nối...</span>
-        </div>
+      <div class="rail-foot">
+        <div class="connection"><span id="connection-dot"></span><div><b id="connection-label">Đang kết nối</b><small>Local gateway</small></div></div>
+        <small>simTech v1.0</small>
       </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Header -->
-      <header class="main-header">
-        <button class="menu-toggle" id="menu-toggle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-
-        <div class="header-title">
-          <h1 id="page-title">Dashboard</h1>
-          <p id="page-subtitle">Tổng quan hệ thống GSM</p>
+    <main class="workspace">
+      <header class="topbar">
+        <button id="mobile-menu" class="icon-button" aria-label="Mở menu">☰</button>
+        <div>
+          <p class="eyebrow" id="page-eyebrow">CONTROL CENTER</p>
+          <h1 id="page-title">Tổng quan vận hành</h1>
         </div>
-
-        <div class="header-actions"></div>
+        <div class="top-actions">
+          <span class="clock" id="live-clock"></span>
+          <button class="button secondary" id="global-refresh">↻ Làm mới</button>
+          <button class="button primary" data-go="messages">+ Gửi SMS</button>
+        </div>
       </header>
 
-      <!-- Page Container -->
-      <div class="page-container">
-        <!-- Dashboard Page -->
-        <!-- Dashboard Page (System Monitoring) -->
-        <div id="page-dashboard" class="page active">
-          
-          <div class="sys-monitoring-header">
-             <div class="sys-title-col">
-                <h2 style="font-size: 1.6rem; font-weight: 700; margin-bottom: 6px;">System Control Center</h2>
-                <div class="sys-badge-wrap"><span class="sys-badge online">● System Normal</span> <span style="font-size:0.85rem; color: var(--text-muted); margin-left: 12px;">Realtime GSM Infrastructure Monitoring</span></div>
-             </div>
-             <div class="sys-actions-col">
-                <button class="btn btn-outline" id="sys-refresh-btn" style="border-radius: 8px;">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg> Refresh Data
-                </button>
-             </div>
+      <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+      <section class="page active" id="page-overview">
+        <div class="hero-strip">
+          <div>
+            <span class="live-pill"><i></i> LIVE SYSTEM</span>
+            <h2>Mọi SIM, tin nhắn và cuộc gọi<br>trong một bàn điều khiển.</h2>
+            <p>Hệ thống hoạt động độc lập, không còn phụ thuộc SMS Global Hub.</p>
           </div>
-
-          <!-- Section 1: System Overview (6 Stats) -->
-          <div class="sys-overview-grid">
-             <div class="sys-stat-card">
-                <div class="sys-stat-icon text-success">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18" /></svg>
-                </div>
-                <div class="sys-stat-data">
-                   <h4>SIM Online</h4>
-                   <h2 id="sys-sim-online">0</h2>
-                </div>
-             </div>
-             <div class="sys-stat-card">
-                <div class="sys-stat-icon text-danger">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-                <div class="sys-stat-data">
-                   <h4>SIM Offline/Error</h4>
-                   <h2 id="sys-sim-offline">0</h2>
-                </div>
-             </div>
-             <div class="sys-stat-card">
-                <div class="sys-stat-icon text-primary">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                </div>
-                <div class="sys-stat-data">
-                   <h4>SMS Đã Gửi (24h)</h4>
-                   <h2 id="sys-sms-sent">0</h2>
-                </div>
-             </div>
-             <div class="sys-stat-card">
-                <div class="sys-stat-icon text-warning">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg>
-                </div>
-                <div class="sys-stat-data">
-                   <h4>Cuộc Gọi (24h)</h4>
-                   <h2 id="sys-calls-made">0</h2>
-                </div>
-             </div>
-             <div class="sys-stat-card">
-                <div class="sys-stat-icon text-success">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-                <div class="sys-stat-data">
-                   <h4>Tỷ Lệ Thành Công</h4>
-                   <h2 id="sys-success-rate">100%</h2>
-                </div>
-             </div>
-             <div class="sys-stat-card">
-                <div class="sys-stat-icon text-info">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                </div>
-                <div class="sys-stat-data">
-                   <h4>Thiết Bị ( Modem )</h4>
-                   <h2 id="sys-active-devices">0</h2>
-                </div>
-             </div>
-          </div>
-
-          <!-- Section 2, 3, 4: Middle Analytics Tier -->
-          <div class="sys-analytics-tier">
-             <!-- Realtime Activity -->
-             <div class="card sys-activity-card">
-                <div class="card-header">
-                   <h3>Realtime Activity</h3>
-                </div>
-                <div class="card-body p-0">
-                   <div class="sys-timeline" id="sys-activity-feed">
-                      <div class="empty-state" style="padding: 40px 20px;">System logs will appear here.</div>
-                   </div>
-                </div>
-             </div>
-
-             <!-- SMS Analytics -->
-             <div class="card sys-chart-card">
-                <div class="card-header">
-                   <h3>SMS Analytics (Hôm nay)</h3>
-                </div>
-                <div class="card-body">
-                   <div class="sys-chart-placeholder">
-                      <div class="sys-bar-chart">
-                         <!-- CSS Bar Chart mock -->
-                         <div class="bar-col"><div class="bar" style="height: 40%;"></div><span>Sáng</span></div>
-                         <div class="bar-col"><div class="bar" style="height: 70%;"></div><span>Trưa</span></div>
-                         <div class="bar-col"><div class="bar" style="height: 30%;"></div><span>Chiều</span></div>
-                         <div class="bar-col"><div class="bar active" style="height: 85%;"></div><span>Tối</span></div>
-                      </div>
-                   </div>
-                   <div class="sys-top-entities">
-                      <h5>Top SIM Gửi SMS</h5>
-                      <ul class="sys-list" id="sys-top-sms-sims">
-                         <li style="color: var(--text-muted); font-style: italic;">Đang thu thập...</li>
-                      </ul>
-                   </div>
-                </div>
-             </div>
-
-             <!-- Call Analytics -->
-             <div class="card sys-chart-card">
-                <div class="card-header">
-                   <h3>Call Analytics (Hôm nay)</h3>
-                </div>
-                <div class="card-body">
-                   <div class="sys-mini-stats">
-                      <div class="sys-mini-stat"><span>Tỷ lệ nghe</span><strong class="text-success">--%</strong></div>
-                      <div class="sys-mini-stat"><span>Tgian TB</span><strong>--s</strong></div>
-                      <div class="sys-mini-stat"><span>Fail rate</span><strong class="text-danger">--%</strong></div>
-                   </div>
-                   <div class="sys-top-entities" style="margin-top: 24px;">
-                      <h5>SIM Gọi Nhiều Nhất</h5>
-                      <ul class="sys-list" id="sys-top-call-sims">
-                         <li style="color: var(--text-muted); font-style: italic;">Đang thu thập...</li>
-                      </ul>
-                   </div>
-                </div>
-             </div>
-          </div>
-
-          <!-- Section 5: SIM Management & Section 6: Devices -->
-          <div class="sys-bottom-tier">
-             <!-- SIM Management Refactor -->
-             <div class="card card-sims sys-card-full">
-                <div class="card-header" style="flex-wrap: wrap; gap: 16px;">
-                   <h3>Quản Lý Thiết Bị & Cổng SIM</h3>
-                   <div class="sys-sim-filters">
-                      <input type="text" id="sim-search-input" class="text-input" placeholder="Tìm bằng Phone, Port, ID..." style="width: 250px;">
-                      <select class="select-input" id="sim-status-filter" style="width: 160px; display: inline-block;">
-                         <option value="ALL">Tất cả trạng thái</option>
-                         <option value="ACTIVE">Chỉ SIM Active</option>
-                         <option value="ERROR">Chỉ SIM Lỗi</option>
-                      </select>
-                      <button class="btn btn-primary" id="scan-sim-btn">
-                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; margin-right:6px;">
-                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
-                         </svg>
-                         Scan All Ports
-                      </button>
-                   </div>
-                </div>
-                <div class="card-body" style="padding: 0;">
-                   <div class="table-responsive">
-                      <table class="modern-table sys-table">
-                         <thead>
-                            <tr>
-                               <th>SIM Identity</th>
-                               <th>Cổng Kết Nối (COM)</th>
-                               <th>Trạng Thái Cổng</th>
-                               <th>Trạng Thái Mạng</th>
-                               <th>SMS (Nay)</th>
-                               <th>Call (Nay)</th>
-                               <th>Hành Động</th>
-                            </tr>
-                         </thead>
-                         <tbody id="sim-tbody">
-                            <tr>
-                               <td colspan="7">
-                                  <div class="empty-state" style="padding: 60px 0;">
-                                     <div class="empty-icon-wrapper" style="width: 80px; height: 80px; background: rgba(94, 106, 210, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                                        <svg viewBox="0 0 24 24" fill="none" class="w-8 h-8" stroke="var(--primary)" stroke-width="1.5" style="width:40px; height:40px;">
-                                          <rect x="5" y="2" width="14" height="20" rx="2" />
-                                          <line x1="12" y1="18" x2="12" y2="18" />
-                                        </svg>
-                                     </div>
-                                     <p style="font-size: 1.1rem; font-weight: 500;">No SIM / Port detected</p>
-                                     <span style="color: var(--text-muted); font-size: 0.9rem;">Hệ thống chưa tìm thấy cổng COM hoặc SIM nào. Hãy "Scan All Ports".</span>
-                                  </div>
-                               </td>
-                            </tr>
-                         </tbody>
-                      </table>
-                   </div>
-                </div>
-             </div>
-          </div>
-          
+          <button class="button light" id="hero-scan">Quét toàn bộ cổng →</button>
         </div>
 
-        <!-- Scan SIM Page -->
-        <!-- Scan SIM Page (Monitoring & Control) -->
-        <div id="page-scan-sim" class="page">
-          <!-- Header and Scan Progress -->
-          <div class="sim-ctrl-header card" style="padding: 24px; margin-bottom: 24px;">
-             <div class="sim-ctrl-top" style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div class="sim-ctrl-title">
-                   <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">SIM Monitoring & Control</h2>
-                   <div class="text-muted" style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
-                       <span id="scan-text">Sẵn sàng. Hệ thống chưa quét</span>
-                   </div>
-                </div>
-                <button class="btn btn-primary btn-scan-pulse" id="do-scan-btn">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; margin-right: 6px;">
-                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
-                  </svg>
-                  Quét Toàn Bộ SIM
-                </button>
-             </div>
-             <div class="scan-progress-bar" id="scan-status" style="margin-top: 20px; background: var(--bg-dark); border-radius: 8px; overflow: hidden; height: 6px;">
-                <div class="scan-progress" id="scan-progress" style="height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; box-shadow: 0 0 10px var(--primary);"></div>
-             </div>
-          </div>
-
-          <!-- Quick Stats Summary -->
-          <div class="sim-ctrl-stats" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px;">
-              <div class="sim-mini-stat stat-all" style="background: var(--bg-card); border-radius: 12px; padding: 16px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: var(--text-secondary); font-size: 0.9rem;">Total SIM</span><strong id="ctrl-stat-total" style="font-size: 1.4rem;">0</strong>
-              </div>
-              <div class="sim-mini-stat stat-active" style="background: rgba(16, 185, 129, 0.05); border-radius: 12px; padding: 16px; border: 1px solid rgba(16, 185, 129, 0.2); display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: var(--success); font-size: 0.9rem;">🟢 Active</span><strong id="ctrl-stat-active" style="color: var(--success); font-size: 1.4rem;">0</strong>
-              </div>
-              <div class="sim-mini-stat stat-busy" style="background: rgba(245, 158, 11, 0.05); border-radius: 12px; padding: 16px; border: 1px solid rgba(245, 158, 11, 0.2); display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: var(--warning); font-size: 0.9rem;">🟡 Busy</span><strong id="ctrl-stat-busy" style="color: var(--warning); font-size: 1.4rem;">0</strong>
-              </div>
-              <div class="sim-mini-stat stat-error" style="background: rgba(239, 68, 68, 0.05); border-radius: 12px; padding: 16px; border: 1px solid rgba(239, 68, 68, 0.2); display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: var(--danger); font-size: 0.9rem;">🔴 Error</span><strong id="ctrl-stat-error" style="color: var(--danger); font-size: 1.4rem;">0</strong>
-              </div>
-              <div class="sim-mini-stat stat-idle" style="background: rgba(156, 163, 175, 0.05); border-radius: 12px; padding: 16px; border: 1px solid rgba(156, 163, 175, 0.2); display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: var(--text-muted); font-size: 0.9rem;">⚪ Idle</span><strong id="ctrl-stat-idle" style="color: var(--text-muted); font-size: 1.4rem;">0</strong>
-              </div>
-          </div>
-
-          <!-- Filter & Search Toolbar -->
-          <div class="sim-ctrl-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px;">
-              <div class="sim-filter-tabs" id="sim-ctrl-filter-tabs" style="display: flex; gap: 8px; background: var(--bg-card); padding: 6px; border-radius: 12px;">
-                  <button class="sim-filter-btn active" data-filter="ALL">Tất cả</button>
-                  <button class="sim-filter-btn" data-filter="ONLINE">Active</button>
-                  <button class="sim-filter-btn" data-filter="BUSY">Busy</button>
-                  <button class="sim-filter-btn" data-filter="ERROR">Error</button>
-                  <button class="sim-filter-btn" data-filter="INACTIVE">Idle</button>
-              </div>
-              <div class="sim-search-box" style="position: relative; flex: 1; max-width: 300px;">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="position: absolute; left: 12px; top: 10px; width: 18px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                 <input type="text" id="sim-ctrl-search" class="text-input" placeholder="Search ID, Port, Network..." style="padding-left: 40px; border-radius: 12px; width: 100%; border-color: var(--border-light);" />
-              </div>
-          </div>
-
-          <!-- Alert Banner (Hidden by default) -->
-          <div class="sim-ctrl-alert" id="sim-ctrl-alert" style="display:none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 12px 20px; border-radius: 12px; margin-bottom: 24px; justify-content: space-between; align-items: center;">
-             <div>
-                <span style="color: var(--danger); font-weight: 500;">⚠️ Phát hiện <strong id="sim-alert-count">0</strong> SIM đang gặp sự cố kết nối!</span>
-                <span id="sim-alert-list" style="color: var(--danger); font-size: 0.9rem; margin-left: 8px; opacity: 0.9;"></span>
-             </div>
-             <button class="btn btn-sm btn-outline" style="border-color: var(--danger); color: var(--danger);" onclick="document.querySelector('[data-filter=\'ERROR\']').click()">Lọc SIM lỗi</button>
-          </div>
-
-          <!-- Visual Grid -->
-          <div class="sim-ctrl-grid" id="sim-list-grid">
-              <!-- Empty state initially -->
-              <div class="empty-state card" style="grid-column: 1 / -1; padding: 80px 20px; border-style: dashed;">
-                  <div style="background: var(--bg-dark); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width: 32px;"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12" y2="18"></line></svg>
-                  </div>
-                  <h3 style="margin-bottom: 8px;">Empty Control Surface</h3>
-                  <p style="color: var(--text-muted); font-size: 0.95rem;">Hệ thống chưa tải danh sách. Hãy bấn "Quét Toàn Bộ SIM" để bắt đầu giám sát.</p>
-              </div>
-          </div>
+        <div class="metric-grid">
+          <article class="metric-card"><span class="metric-icon mint">SIM</span><div><small>SIM đang online</small><strong id="metric-online">0</strong><em id="metric-total">0 thiết bị</em></div></article>
+          <article class="metric-card"><span class="metric-icon blue">SMS</span><div><small>SMS đã gửi</small><strong id="metric-sms">0</strong><em>Hôm nay</em></div></article>
+          <article class="metric-card"><span class="metric-icon coral">CALL</span><div><small>Cuộc gọi</small><strong id="metric-calls">0</strong><em>Hôm nay</em></div></article>
+          <article class="metric-card"><span class="metric-icon amber">RATE</span><div><small>Tỷ lệ thành công</small><strong id="metric-rate">—</strong><em>Trong 24 giờ</em></div></article>
         </div>
 
-        <!-- Messages Page -->
-        <div id="page-messages" class="page">
-          <div class="message-split-layout">
-            
-            <!-- Soạn tin nhắn (Left Pane) -->
-            <div class="message-compose-section">
-              <div class="card">
-                <div class="card-header">
-                  <h3>Soạn tin nhắn</h3>
-                </div>
-                <div class="card-body">
-                  <div style="display: flex; flex-direction: column; gap: 16px;">
-                    <div class="form-group" style="margin: 0;">
-                      <label>COM Port gửi đi</label>
-                      <select class="select-input" id="sms-com-port" required>
-                        <option value="">-- Chọn COM Port --</option>
-                      </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                      <label>Số điện thoại nhận</label>
-                      <input type="text" class="text-input" id="sms-phone" placeholder="VD: +84987654321, 090..." required>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                      <label>Nội dung tin nhắn</label>
-                      <textarea class="textarea-input" id="sms-content" rows="6" placeholder="Nhập nội dung..." required style="resize: vertical;"></textarea>
-                    </div>
-                    <button class="btn btn-primary btn-lg" id="send-sms-btn" style="width: 100%; border-radius: 12px; padding: 12px; display: flex; justify-content: center; align-items: center; gap: 8px;">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
-                        <line x1="22" y1="2" x2="11" y2="13" />
-                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                      </svg>
-                      Gửi tin nhắn
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Lịch sử tin nhắn (Right Pane) -->
-            <div class="message-history-section">
-              <div class="card" style="height: 100%; display: flex; flex-direction: column;">
-                <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 16px; border-bottom: none; padding-bottom: 0;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3>Lịch sử SMS</h3>
-                    <div class="search-box">
-                      <input type="text" class="text-input" placeholder="Tìm theo số điện thoại..." id="sms-phone-search" style="width: 250px;">
-                    </div>
-                  </div>
-                  
-                  <div class="message-modern-tabs">
-                    <button class="tab-btn active" data-tab="inbox">
-                      Inbox <span class="tab-badge" id="inbox-count">0</span>
-                    </button>
-                    <button class="tab-btn" data-tab="sent">
-                      Đã gửi <span class="tab-badge" id="sent-count">0</span>
-                    </button>
-                    <button class="tab-btn" data-tab="outbox">
-                      Fail <span class="tab-badge error" id="outbox-count">0</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="card-body" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 12px;">
-                  <div class="tab-content" style="flex: 1; overflow-y: auto;">
-                    
-                    <!-- INBOX -->
-                    <div class="tab-pane active" id="tab-inbox">
-                      <table class="modern-table">
-                        <thead>
-                          <tr>
-                            <th>Từ</th>
-                            <th>Nội dung</th>
-                            <th>Thời gian</th>
-                            <th>Port</th>
-                            <th>Thao tác</th>
-                          </tr>
-                        </thead>
-                        <tbody id="inbox-list">
-                          <tr><td colspan="5">Đang tải...</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <!-- SENT -->
-                    <div class="tab-pane" id="tab-sent">
-                      <table class="modern-table">
-                        <thead>
-                          <tr>
-                            <th>Đến</th>
-                            <th>Nội dung</th>
-                            <th>Thời gian</th>
-                            <th>Port</th>
-                            <th>Trạng thái</th>
-                          </tr>
-                        </thead>
-                        <tbody id="sent-list">
-                          <tr><td colspan="5">Đang tải...</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <!-- FAIL -->
-                    <div class="tab-pane" id="tab-outbox">
-                      <table class="modern-table">
-                        <thead>
-                          <tr>
-                            <th>Đến</th>
-                            <th>Nội dung</th>
-                            <th>Thời gian</th>
-                            <th>Port</th>
-                            <th>Lỗi</th>
-                            <th>Thao tác</th>
-                          </tr>
-                        </thead>
-                        <tbody id="outbox-list">
-                          <tr><td colspan="6">Đang tải...</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
+        <div class="overview-grid">
+          <article class="panel span-2">
+            <div class="panel-head"><div><span class="section-kicker">THIẾT BỊ</span><h3>Trạng thái SIM trực tiếp</h3></div><button class="text-button" data-go="devices">Xem tất cả →</button></div>
+            <div id="overview-sims" class="sim-snapshot"><div class="empty">Đang tải danh sách SIM…</div></div>
+          </article>
+          <article class="panel delivery-panel">
+            <div class="panel-head"><div><span class="section-kicker">DELIVERY</span><h3>Kênh chuyển tiếp</h3></div></div>
+            <div class="delivery-route"><span class="route-node source">SMS</span><span class="route-line"></span><div><span class="route-node telegram">TG</span><b>Telegram</b><small id="overview-telegram">Chưa kiểm tra</small></div><div><span class="route-node webhook">WH</span><b>Webhook</b><small id="overview-webhook">Chưa kiểm tra</small></div></div>
+            <button class="button secondary wide" data-go="settings">Cấu hình delivery</button>
+          </article>
+          <article class="panel span-3">
+            <div class="panel-head"><div><span class="section-kicker">MỚI NHẤT</span><h3>Dòng tin nhắn gần đây</h3></div><button class="text-button" data-go="messages">Mở inbox →</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>SIM / Cổng</th><th>Liên hệ</th><th>Nội dung</th><th>Trạng thái</th></tr></thead><tbody id="overview-sms"><tr><td colspan="5" class="empty-cell">Chưa có dữ liệu</td></tr></tbody></table></div>
+          </article>
         </div>
+      </section>
 
-        <!-- Calls Page -->
-        <div id="page-calls" class="page">
-          <div class="message-split-layout">
-            
-            <!-- Soạn Cuộc Gọi (Left Pane) -->
-            <div class="message-compose-section">
-              <div class="card" style="border-radius: 24px; border: 1px solid var(--border-color); background: var(--bg-card);">
-                <div class="card-header" style="border-bottom: 1px solid var(--border-light); padding-bottom: 20px;">
-                  <h3 style="font-size: 1.3rem; font-weight: 600;">Thực hiện cuộc gọi</h3>
-                  <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Chọn SIM và thiết lập cấu hình cuộc gọi an toàn</p>
-                </div>
-                <div class="card-body" style="padding: 24px;">
-                  <form id="call-form" style="display: flex; flex-direction: column; gap: 20px;">
-                    
-                    <!-- Device Section -->
-                    <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; border: 1px solid var(--border-light);">
-                      <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-weight: 500; font-size: 0.9rem;">Thiết bị & Cổng (COM Port)</label>
-                      <select class="select-input" id="call-com-port" style="width: 100%; border: none; font-size: 1.05rem; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px;" required>
-                        <option value="">-- Chọn thiết bị GSM --</option>
-                      </select>
-                      <div style="margin-top: 12px; font-size: 0.9rem; color: var(--text-muted); display: flex; justify-content: space-between;">
-                        <span>Số điện thoại SIM:</span>
-                        <strong id="call-sim-phone" style="color: var(--primary-light);">Đang chờ...</strong>
-                      </div>
-                    </div>
-
-                    <!-- Target Number Section -->
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                      <label style="color: var(--text-secondary); font-weight: 500; font-size: 0.9rem;">Số điện thoại người nhận</label>
-                      <input type="text" id="call-target" placeholder="VD: 0901234567" required
-                             style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-light); padding: 14px; font-size: 1.25rem; letter-spacing: 1px; color: var(--text-primary); border-radius: 12px; text-align: center; width: 100%;">
-                    </div>
-
-                    <!-- Settings Section -->
-                    <div style="display: flex; gap: 16px; align-items: stretch;">
-                      <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-                        <label style="color: var(--text-secondary); font-weight: 500; font-size: 0.9rem;">Thời lượng (giây)</label>
-                        <select class="select-input" id="call-duration" style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; height: 100%;">
-                          <option value="10">10s (Ngắn)</option>
-                          <option value="20" selected>20s (Tiêu chuẩn)</option>
-                          <option value="30">30s (Khuyên dùng)</option>
-                          <option value="60">60s (Tối đa)</option>
-                        </select>
-                      </div>
-                      
-                      <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="color: transparent; font-size: 0.9rem;">.</label>
-                        <label class="checkbox-label" style="background: rgba(0,0,0,0.2); padding: 0 16px; border-radius: 12px; border: 1px solid var(--border-light); margin: 0; display: flex; align-items: center; justify-content: center; height: 100%; cursor: pointer;">
-                          <input type="checkbox" id="call-record" checked>
-                          <span class="checkmark"></span>
-                          <span style="font-weight: 500; font-size: 0.95rem;">Ghi âm</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <!-- Action Button -->
-                    <button type="submit" class="btn btn-primary btn-call-pulse" style="width: 100%; padding: 14px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(94, 106, 210, 0.4); border: none; margin-top: 8px;">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 24px; height: 24px;">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72" />
-                      </svg>
-                      THỰC HIỆN CUỘC GỌI
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </div>
-
-            <!-- Lịch sử cuộc gọi (Right Pane) -->
-            <div class="message-history-section">
-              <div class="card" style="height: 100%; display: flex; flex-direction: column; border-radius: 24px;">
-                <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 16px; padding-bottom: 20px; border-bottom: none;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                      <h3 style="font-size: 1.3rem; font-weight: 600;">Lịch sử cuộc gọi</h3>
-                      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Theo dõi các cuộc gọi và nghe lại ghi âm</p>
-                    </div>
-                    <div style="display: flex; gap: 12px;">
-                      <div class="search-box">
-                        <input type="text" class="text-input" placeholder="Tìm kiếm theo SĐT..." id="call-phone-search" style="width: 250px; border-radius: 12px; background: var(--bg-dark);">
-                      </div>
-                      <button class="btn btn-outline" id="refresh-calls-btn" style="border-radius: 12px; padding: 0 16px;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="card-body" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
-                  <div class="call-history-list" style="flex: 1; overflow-y: auto;">
-                    <table class="modern-table">
-                        <thead>
-                          <tr>
-                            <th>Port (Từ)</th>
-                            <th>SĐT Nhận (Đến)</th>
-                            <th>Thời lượng</th>
-                            <th>Trạng thái</th>
-                            <th>Ngày gọi</th>
-                            <th>Công cụ</th>
-                          </tr>
-                        </thead>
-                        <tbody id="call-tbody">
-                          <tr>
-                            <td colspan="6">
-                              <div class="empty-state" style="padding: 60px 0;">
-                                <div style="width: 80px; height: 80px; background: var(--bg-dark); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px;">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="1.5" style="width: 40px; height: 40px;">
-                                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72" />
-                                    </svg>
-                                </div>
-                                <h3>Chưa có cuộc gọi nào</h3>
-                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 8px;">Dữ liệu lịch sử các cuộc gọi sẽ xuất hiện ở đây.</p>
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                    </table>
-                  </div>
-                  <!-- Pagination for calls -->
-                  <div class="pagination" id="call-pagination" style="border-top: 1px solid var(--border-light); padding: 16px 24px; border-radius: 0 0 24px 24px; background: var(--bg-dark);">
-                    <button class="btn btn-sm btn-outline" id="call-prev-page" style="border-radius: 8px;" disabled>« Trang trước</button>
-                    <span class="pagination-info" id="call-page-info" style="font-weight: 500;">Trang 1</span>
-                    <button class="btn btn-sm btn-outline" id="call-next-page" style="border-radius: 8px;">Trang sau »</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
+      <section class="page" id="page-devices">
+        <div class="section-toolbar">
+          <div class="search-box">⌕ <input id="sim-search" placeholder="Tìm số điện thoại, cổng COM, ICCID…"></div>
+          <select id="sim-status-filter"><option value="">Mọi trạng thái</option><option value="ONLINE">Online</option><option value="OFFLINE">Offline</option><option value="INACTIVE">Inactive</option></select>
+          <button class="button primary" id="scan-sims">↻ Quét SIM</button>
         </div>
-
-        <!-- Floating Audio Player (shows when playing recordings from call history) -->
-        <div class="audio-player-floating" id="audio-player" style="display: none;">
-          <div class="audio-player-content">
-            <div class="audio-info">
-              <span class="audio-icon">🎵</span>
-              <div class="audio-details">
-                <span class="audio-title" id="audio-title">Đang phát...</span>
-                <span class="audio-duration" id="audio-duration">00:00 / 00:00</span>
-              </div>
-            </div>
-            <div class="audio-controls">
-              <button class="audio-btn play-btn" id="audio-play" title="Play/Pause">
-                <svg viewBox="0 0 24 24" fill="currentColor" id="play-icon">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </button>
-              <div class="audio-progress">
-                <input type="range" min="0" max="100" value="0" id="audio-progress-bar">
-              </div>
-              <button class="audio-btn" id="audio-download" title="Tải xuống">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-              </button>
-              <button class="audio-btn" id="audio-folder" title="Mở thư mục">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                </svg>
-              </button>
-              <button class="audio-close" id="audio-close" title="Đóng">×</button>
-            </div>
-          </div>
-          <audio id="audio-element"></audio>
+        <div class="panel">
+          <div class="panel-head"><div><span class="section-kicker">SIM INVENTORY</span><h3>Danh sách thiết bị</h3></div><span class="count-badge" id="sim-count">0 SIM</span></div>
+          <div class="device-grid" id="device-grid"><div class="empty">Đang tải thiết bị…</div></div>
         </div>
+      </section>
 
-        <!-- Proxy Page -->
-        <div id="page-proxy" class="page">
-          <!-- Proxy Overview Stats -->
-          <div class="proxy-overview">
-            <div class="stat-card stat-primary">
-              <div class="stat-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="2" y1="12" x2="22" y2="12" />
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-value" id="proxy-stat-running">0</span>
-                <span class="stat-label">Proxy đang chạy</span>
-              </div>
-            </div>
-            <div class="stat-card stat-success">
-              <div class="stat-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="5" y="2" width="14" height="20" rx="2" />
-                  <line x1="12" y1="18" x2="12" y2="18" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-value" id="proxy-stat-available">0</span>
-                <span class="stat-label">SIM sẵn sàng</span>
-              </div>
-            </div>
-            <div class="stat-card stat-warning">
-              <div class="stat-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-value" id="proxy-stat-requests">0</span>
-                <span class="stat-label">Tổng requests</span>
-              </div>
-            </div>
-            <div class="stat-card stat-info">
-              <div class="stat-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-value" id="proxy-stat-traffic">0 B</span>
-                <span class="stat-label">Traffic</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Proxy Toolbar -->
-          <div class="proxy-toolbar">
-            <div class="toolbar-left">
-              <button class="btn btn-primary" id="proxy-start-all-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-                Start All
-              </button>
-              <button class="btn btn-danger" id="proxy-stop-all-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="6" y="6" width="12" height="12" />
-                </svg>
-                Stop All
-              </button>
-              <button class="btn btn-outline" id="proxy-refresh-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
-                </svg>
-                Refresh
-              </button>
-              <button class="btn btn-outline" id="proxy-export-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-                Export
-              </button>
-            </div>
-            <div class="toolbar-right">
-              <div class="proxy-apn-input">
-                <label style="font-size:0.8rem;color:var(--text-muted);margin-right:6px;">APN:</label>
-                <input type="text" class="text-input" id="proxy-apn" value="rakuten.jp" 
-                  style="width:140px;padding:6px 10px;font-size:0.85rem;">
-              </div>
-            </div>
-          </div>
-
-          <!-- Proxy Cards Grid -->
-          <div class="proxy-grid" id="proxy-grid">
-            <div class="empty-state">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10" />
-              </svg>
-              <p>Chưa có proxy nào</p>
-              <span>Nhấn "Start All" hoặc scan SIM trước</span>
-            </div>
-          </div>
+      <section class="page" id="page-messages">
+        <div class="split-layout">
+          <article class="panel compose-card">
+            <div class="panel-head"><div><span class="section-kicker">COMPOSE</span><h3>Gửi tin nhắn mới</h3></div></div>
+            <form id="sms-form" class="form-stack">
+              <label>Cổng SIM<select id="sms-port" required><option value="">Chọn cổng COM</option></select></label>
+              <label>Số điện thoại nhận<input id="sms-phone" type="tel" placeholder="+84…" required></label>
+              <label>Nội dung<textarea id="sms-content" maxlength="1000" rows="6" placeholder="Nhập nội dung tin nhắn…" required></textarea><span class="field-note"><i id="sms-length">0</i>/1000 ký tự</span></label>
+              <button class="button primary wide" type="submit">Gửi qua SIM đã chọn</button>
+            </form>
+          </article>
+          <article class="panel message-list-panel">
+            <div class="panel-head responsive"><div><span class="section-kicker">MESSAGE CENTER</span><h3>Lịch sử tin nhắn</h3></div><div class="segmented"><button class="active" data-sms-tab="INBOX">Inbox</button><button data-sms-tab="SENT">Đã gửi</button><button data-sms-tab="OUTBOX">Lỗi</button></div></div>
+            <div class="message-list" id="message-list"><div class="empty">Đang tải tin nhắn…</div></div>
+          </article>
         </div>
+      </section>
 
-        <!-- Fail Tracking Page -->
-        <div id="page-fail-tracking" class="page">
-           <!-- SIM Connection Errors -->
-           <div class="card sys-card-full" style="margin-bottom: 24px;">
-              <div class="card-header" style="flex-wrap: wrap; gap: 16px;">
-                 <h3>🔴 SIM Lỗi Kết Nối</h3>
-              </div>
-              <div class="card-body">
-                 <div class="table-responsive">
-                    <table class="modern-table sys-table">
-                       <thead>
-                          <tr>
-                             <th>COM Port</th>
-                             <th>Số Điện Thoại</th>
-                             <th>Nhà Mạng</th>
-                             <th>Trạng Thái</th>
-                             <th>Lỗi</th>
-                          </tr>
-                       </thead>
-                       <tbody id="error-sims-tbody">
-                          <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">Chưa có dữ liệu. Hệ thống đang cập nhật...</td></tr>
-                       </tbody>
-                    </table>
-                 </div>
-              </div>
-           </div>
-
-           <!-- Blacklist / Fail Stats -->
-           <div class="card sys-card-full">
-              <div class="card-header" style="flex-wrap: wrap; gap: 16px;">
-                 <h3>⚠️ Theo Dõi Lỗi Gửi SMS & Blacklist</h3>
-                 <div class="sys-sim-filters">
-                    <button class="btn btn-primary" onclick="loadFailStats()">
-                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg> Refresh
-                    </button>
-                 </div>
-              </div>
-              <div class="card-body">
-                 <div class="table-responsive">
-                    <table class="modern-table sys-table">
-                       <thead>
-                          <tr>
-                             <th>COM Port</th>
-                             <th>Lỗi Liên Tiếp</th>
-                             <th>Tổng Lỗi Hôm Nay</th>
-                             <th>Trạng thái</th>
-                             <th>Hành động</th>
-                          </tr>
-                       </thead>
-                       <tbody id="fail-stats-tbody">
-                          <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">Nhấn Refresh để xem dữ liệu...</td></tr>
-                       </tbody>
-                    </table>
-                 </div>
-                 <div style="margin-top:20px; font-size:0.9rem; color:var(--text-muted);">
-                   <p>⚠️ Hệ thống tự động khoá (blacklist) SIM nếu fail liên tiếp 5 lần khi gửi SMS. Trạng thái sẽ được <strong>reset tự động vào cuối ngày</strong> (hoặc gỡ khóa tay).</p>
-                 </div>
-              </div>
-           </div>
-         </div>
-
-        <!-- SIM Health Page -->
-        <div id="page-sim-health" class="page">
-          <!-- Header -->
-          <div class="card" style="padding: 24px; margin-bottom: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-              <div>
-                <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;">🏥 SIM Health Monitor</h2>
-                <p style="color: var(--text-muted); font-size: 0.95rem;">Phát hiện SIM chết tự động — Kiểm tra CREG, Signal, CPIN, Operator mỗi 3 phút</p>
-              </div>
-              <div style="display:flex;gap:8px;">
-                <button class="btn btn-outline" id="health-refresh-btn">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:6px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
-                  Refresh
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Stats -->
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
-            <div class="card" style="padding: 20px; text-align: center; border-left: 4px solid var(--success);">
-              <div style="font-size: 2.2rem; font-weight: 800; color: var(--success);" id="health-alive">0</div>
-              <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">🟢 SIM Alive</div>
-            </div>
-            <div class="card" style="padding: 20px; text-align: center; border-left: 4px solid var(--danger);">
-              <div style="font-size: 2.2rem; font-weight: 800; color: var(--danger);" id="health-dead">0</div>
-              <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">🔴 SIM Dead</div>
-            </div>
-            <div class="card" style="padding: 20px; text-align: center; border-left: 4px solid var(--warning);">
-              <div style="font-size: 2.2rem; font-weight: 800; color: var(--warning);" id="health-warning">0</div>
-              <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">⚠️ Cảnh báo</div>
-            </div>
-            <div class="card" style="padding: 20px; text-align: center; border-left: 4px solid var(--primary);">
-              <div style="font-size: 2.2rem; font-weight: 800; color: var(--text-secondary);" id="health-total">0</div>
-              <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">📊 Tổng SIM</div>
-            </div>
-          </div>
-
-          <!-- Health Table -->
-          <div class="card">
-            <div class="card-header" style="flex-wrap: wrap; gap: 16px;">
-              <h3>Chi Tiết Sức Khỏe SIM</h3>
-              <div style="display:flex;gap:8px; background: var(--bg-dark); padding: 4px; border-radius: 10px;">
-                <button class="sim-filter-btn active" data-health-filter="ALL">Tất cả</button>
-                <button class="sim-filter-btn" data-health-filter="DEAD">🔴 Dead</button>
-                <button class="sim-filter-btn" data-health-filter="WARNING">⚠️ Warning</button>
-                <button class="sim-filter-btn" data-health-filter="ALIVE">🟢 Alive</button>
-              </div>
-            </div>
-            <div class="card-body" style="padding: 0;">
-              <div class="table-responsive">
-                <table class="modern-table sys-table">
-                  <thead>
-                    <tr>
-                      <th>COM Port</th>
-                      <th>SĐT</th>
-                      <th>Mạng (CREG)</th>
-                      <th>Tín hiệu (CSQ)</th>
-                      <th>SIM (CPIN)</th>
-                      <th>Nhà mạng</th>
-                      <th>SMS Stats</th>
-                      <th>Trạng thái</th>
-                      <th>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody id="health-tbody">
-                    <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:60px 0;">Đang chờ dữ liệu health check... (tự động mỗi 3 phút)</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:20px; font-size:0.9rem; color:var(--text-muted);">
-            <p>🏥 Hệ thống tự động check sức khỏe SIM mỗi 3 phút bằng AT commands (CREG, CSQ, CPIN, COPS).</p>
-            <p>🔴 SIM bị đánh DEAD sẽ <strong>tự động loại khỏi pool gửi SMS</strong>. SIM sống lại sẽ tự động recovery.</p>
-          </div>
+      <section class="page" id="page-calls">
+        <div class="split-layout">
+          <article class="panel compose-card call-composer">
+            <div class="panel-head"><div><span class="section-kicker">DIALER</span><h3>Thực hiện cuộc gọi</h3></div><span class="call-orb">☎</span></div>
+            <form id="call-form" class="form-stack">
+              <label>Cổng SIM<select id="call-port" required><option value="">Chọn cổng COM</option></select></label>
+              <label>Số cần gọi<input id="call-phone" type="tel" placeholder="+84…" required></label>
+              <div class="two-fields"><label>Thời lượng<input id="call-duration" type="number" min="5" max="3600" value="30"></label><label class="switch-label">Ghi âm<span class="switch"><input id="call-record" type="checkbox"><i></i></span></label></div>
+              <button class="button call-button wide" type="submit">☎ Bắt đầu gọi</button>
+            </form>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><span class="section-kicker">CALL LOG</span><h3>Lịch sử cuộc gọi</h3></div><button class="text-button" id="refresh-calls">Làm mới ↻</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Cổng</th><th>Số điện thoại</th><th>Thời lượng</th><th>Trạng thái</th><th></th></tr></thead><tbody id="call-history"><tr><td colspan="6" class="empty-cell">Chưa có cuộc gọi</td></tr></tbody></table></div>
+          </article>
         </div>
+      </section>
 
-      </div>
+      <section class="page" id="page-settings">
+        <div class="settings-intro">
+          <div><span class="section-kicker">DELIVERY SETTINGS</span><h2>Đưa SMS đến đúng nơi,<br>ngay khi vừa nhận.</h2></div>
+          <p>Mỗi SMS đến được lưu trong MongoDB, sau đó gửi song song tới Telegram và webhook của khách hàng. Hai kênh hoạt động độc lập.</p>
+        </div>
+        <div class="settings-grid">
+          <article class="panel channel-card">
+            <div class="channel-head"><span class="channel-logo telegram">TG</span><div><h3>Telegram</h3><p>Thông báo tức thời cho nhóm vận hành.</p></div><span class="status-chip" id="telegram-chip">Đang kiểm tra</span></div>
+            <div class="channel-body"><p>Bot token và Chat ID được cấu hình an toàn trong file <code>.env</code>.</p><button class="button secondary" id="test-telegram">Gửi tin thử</button></div>
+          </article>
+          <article class="panel channel-card webhook-card">
+            <div class="channel-head"><span class="channel-logo webhook">WH</span><div><h3>Customer Webhook</h3><p>POST JSON trực tiếp về hệ thống khách hàng.</p></div><label class="switch"><input id="webhook-enabled" type="checkbox"><i></i></label></div>
+            <form id="webhook-form" class="form-stack channel-body">
+              <label>Webhook URL<input id="webhook-url" type="url" placeholder="https://customer.example.com/hooks/sms"></label>
+              <label>Bearer token <span class="optional">không bắt buộc</span><input id="webhook-token" type="password" autocomplete="new-password" placeholder="Để trống nếu không thay đổi"><span class="field-note" id="token-state"></span></label>
+              <label class="clear-secret"><input id="clear-webhook-token" type="checkbox"> Xóa bearer token đã lưu</label>
+              <label>Signing secret <span class="optional">HMAC SHA-256</span><input id="webhook-secret" type="password" autocomplete="new-password" placeholder="Để trống nếu không thay đổi"><span class="field-note" id="secret-state"></span></label>
+              <label class="clear-secret"><input id="clear-webhook-secret" type="checkbox"> Xóa signing secret đã lưu</label>
+              <div class="form-actions"><button class="button primary" type="submit">Lưu cấu hình</button><button class="button secondary" type="button" id="test-webhook">Gửi thử webhook</button></div>
+            </form>
+          </article>
+          <article class="panel payload-card">
+            <div class="panel-head"><div><span class="section-kicker">PAYLOAD PREVIEW</span><h3>Dữ liệu khách hàng nhận được</h3></div><span class="code-tag">POST JSON</span></div>
+            <pre>{
+  "eventId": "e3c8…",
+  "event": "sms.received",
+  "test": false,
+  "occurredAt": "2026-08-02T12:05:00Z",
+  "comPort": "COM7",
+  "simPhone": "+84901234567",
+  "from": "BANK",
+  "content": "Ma OTP cua ban la 482019"
+}</pre>
+            <div class="signature-note"><b>X-SimTech-Signature</b><span>sha256=&lt;HMAC của raw JSON&gt;</span></div>
+          </article>
+        </div>
+      </section>
     </main>
   </div>
 
-  <!-- Modal: Compose SMS -->
-  <div class="modal" id="compose-modal">
-    <div class="modal-overlay"></div>
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Soạn tin nhắn SMS</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="sms-modal-form">
-          <div class="form-group">
-            <label>Chọn COM Port gửi</label>
-            <select class="select-input" id="sms-modal-com-port" required>
-              <option value="">-- Chọn COM Port --</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Số điện thoại người nhận</label>
-            <input type="text" class="text-input" id="sms-modal-phone" placeholder="Nhập số điện thoại" required>
-          </div>
-
-          <div class="form-group">
-            <label>Nội dung tin nhắn</label>
-            <textarea class="textarea-input" id="sms-modal-content" rows="4" placeholder="Nhập nội dung tin nhắn..."
-              required></textarea>
-            <span class="char-count"><span id="char-modal-current">0</span>/160</span>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline modal-cancel">Hủy</button>
-        <button class="btn btn-primary" id="send-modal-sms-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
-          Gửi tin nhắn
-        </button>
-      </div>
-    </div>
-  </div>
-  <!-- Modal: Message Detail -->
-  <div class="modal" id="message-detail-modal">
-    <div class="modal-overlay"></div>
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Chi tiết tin nhắn</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="full-message-content"
-          style="white-space: pre-wrap; word-break: break-all; padding: 15px; background: var(--bg-darker); border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-primary); font-size: 1.05rem; line-height: 1.5; min-height: 100px;">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary modal-cancel" style="min-width: 100px;">Đóng</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Notifications -->
-  <div class="toast-container" id="toast-container"></div>
-
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" id="loading-overlay">
-    <div class="loading-spinner">
-      <div class="spinner"></div>
-      <span id="loading-text">Đang tải...</span>
-    </div>
-  </div>
-
-  <audio id="notification-sound" preload="auto">
-    <source
-      src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQktclzU3b2bYhQmc43y9M+JRQtPdrny7q5cCh97lfP7052FMwBdpN74q4uCPwBjpuD4oYx9OQBtqN74nIl6OQBxqN73mId2NwB3qd32lIRzNQB9qt71kIFwMwCDq93zi35tMACIrN3xhXtqLQCOrtvwgXhmKgCTr9rugHZjJwCYsNrsfnNfJAGcsdnqe3BcIQOhsdjoeG1ZHgWlstfmdGpWGweostblcGdTFQqsstXjbGRQEguystTha2FNDw63s9PgZl5KDA+7tNLdYltHCRK/tdHbXlhEBhXDttDZWlVBBBjHt8/XVlI+ARvLuM7VUk87/x7OutHSTk44/CLSvM/PTEo1+CbWvc7NSEU0+CnZv8zMQUIu+S3ev8rJPz8p+zLhwcnGPDwm/TbkwsfDOTkj/zroxMXAN zYgAD/ryMS8NDMeAkPuzMS6MTAZ/0bxzcO3Li0V/0r0z8G0Ki0S/U350MGxJykO+lX90MOtJicK9lz/0cOqIyQG82L/0sOnISED8Gj/08OkHh7/7W7+1cKhGxz86XT91sGdGBn56Hr91sGaFRb36YD818GXERL06IX81sCTDg/ynor81sCPCgvxnY/71L+MCAfvn5T60r6JBQTqopr4z72GAgHlpZ/3zbx/AHrjp6P1yrt8/XDhqaf0x7l5+mzfq6ryx7d29mncral1xa5y9WLbr693xKtv82HXsa12wqlr8l7VtbB0v6Zo8FvVtrRzvaVl7lrVt7dxuqJi7VnVuLpvsZ5f6lrYurxsrZta6VnZvL5oqZhX51jZvsBmpJRU5VjZvsNjoJBR41fawcVgnYxN4lfaxMhemodI31fiyssblYRE3VnfzM9Wj4FA2lzdzNNQioI811/czNdLhH47017by9pFfno21mDb0OA+eHQv0mPZz+M3cG4n0GXX0eYwamgh0GfV0uk/YWoa1mvR0e0sWmMU3GzQ0O8mUlwN4G3O0fEkTFYG1G/M0PMgR1AAgHDL0vQdQUr+g3HI0vYaO0P7h3LE0vgXNT32i3PC0/sUMDb0jnTB0/4RLzHyk3W/1QAPLy3wl3a91QIMLinunXi61gEJLCXroHq31wEGKyPoony01gIDKR/lpoC01wD/JRvik4Ky1gD6Ixnjl4Ow1wD3IhbhlYWv1wD0IBPfmYet1wHxHhHdnIms1QHvHAvbkYqr1AHoGg3ZnIqo0wHlGQrXnouq0wHIFgnVnI2o0gHDFQfUm4+p0gG9EwXSmJGn0QK5EQLRl5On0AKzDgDQl5Sm0AOvDAC/lJWmzwOrCgG+k5ekzwOoCAK9kpemzgSkBgO8kZilzQShBAW7kJmkzQaeAgS6j5miyw2cAAS5jpmhyw6aAAW4jZmiyw+W/wW3jJqgyxGT/ga3i5qgyhKR/Qa2i5qfyhSO/Aa2ipqfyhWL+wa2ipqeyReJ+wi1iZqeyRmG9wi1iZqdyBqD9gm0iJqdyByB9wqziJqcxxyhAQy0iZqcxR2f/QyziJqbxh6c+w2ziZqawx6X+A61i5qZwR+V+BCti5qZwR+REROxjJyYwCCV/hagkJ2XvyKS+hugkp2XviSQ+R6hk52UvCaL9iGilZ6UuymI8yKjl5+SuSqE7yOim5+RtyyB6yWhnJ6QuC59"
-      type="audio/wav">
-  </audio>
-
-  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" defer></script>
-  <script src="./js/app.js?v=2.0" defer></script>
-  <script src="./js/proxy.js" defer></script>
-  <script src="./js/sim-health.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <script src="./js/app.js?v=3.0"></script>
 </body>
-
 </html>
